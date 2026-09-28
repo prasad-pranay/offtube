@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/video_model.dart';
@@ -12,10 +13,7 @@ import 'widgets/video_info_sheet.dart';
 class HomeScreen extends StatefulWidget {
   final VoidCallback onOpenAddVideo;
 
-  const HomeScreen({
-    super.key,
-    required this.onOpenAddVideo,
-  });
+  const HomeScreen({super.key, required this.onOpenAddVideo});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -30,7 +28,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _isGridView = DatabaseService.instance.getSetting<bool>('is_grid_view', false);
+    _isGridView = DatabaseService.instance.getSetting<bool>(
+      'is_grid_view',
+      false,
+    );
   }
 
   @override
@@ -71,7 +72,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               }
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.redAccent),
+            ),
           ),
         ],
       ),
@@ -98,14 +102,44 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        toolbarHeight: 65,
+        backgroundColor: theme.scaffoldBackgroundColor,
+        leading: _isSearching
+            ? IconButton(
+                onPressed: () => setState(() {
+                  _isSearching = false;
+                }),
+                icon: const Icon(CupertinoIcons.chevron_back, size: 28),
+              )
+            : null,
         title: _isSearching
             ? TextField(
                 controller: _searchController,
                 autofocus: true,
-                style: const TextStyle(fontSize: 16),
-                decoration: const InputDecoration(
+                style: TextStyle(fontSize: 16),
+                decoration: InputDecoration(
                   hintText: 'Search downloaded videos...',
-                  border: InputBorder.none,
+                  filled: true,
+                  fillColor: Color(0xFF222222),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  suffixIcon: GestureDetector(
+                    onTap: () => setState(() {
+                      _isSearching = false;
+                    }),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Color(0xFF222222),
+                        borderRadius: BorderRadius.only(
+                          topRight: Radius.circular(12),
+                          bottomRight: Radius.circular(12),
+                        ),
+                      ),
+                      child: Icon(CupertinoIcons.xmark, size: 19),
+                    ),
+                  ),
                 ),
                 onChanged: (val) {
                   setState(() {
@@ -115,41 +149,62 @@ class _HomeScreenState extends State<HomeScreen> {
               )
             : Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppTheme.accentColor, AppTheme.accentGradientEnd],
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.play_arrow_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
+                  Image.asset("appicon.png", width: 40, height: 40),
+                  // Container(
+                  //   padding: const EdgeInsets.all(6),
+                  //   decoration: BoxDecoration(
+                  //     gradient: const LinearGradient(
+                  //       colors: [AppTheme.accentColor, AppTheme.accentGradientEnd],
+                  //     ),
+                  //     borderRadius: BorderRadius.circular(10),
+                  //   ),
+                  //   child: const Icon(
+                  //     Icons.play_arrow_rounded,
+                  //     color: Colors.white,
+                  //     size: 20,
+                  //   ),
+                  // ),
                   const SizedBox(width: 10),
-                  const Text('OfflineTube'),
+                  const Text(
+                    'Youtube',
+                    style: TextStyle(fontStyle: FontStyle.italic),
+                  ),
                 ],
               ),
         actions: [
-          IconButton(
-            icon: Icon(_isSearching ? Icons.close_rounded : Icons.search_rounded),
-            onPressed: () {
-              setState(() {
-                if (_isSearching) {
-                  _isSearching = false;
-                  _searchQuery = '';
-                  _searchController.clear();
-                } else {
-                  _isSearching = true;
+          if (!_isSearching)
+            IconButton(
+              onPressed: () {
+                PlaybackCoordinator.instance.loadPlaylist(
+                  DatabaseService.instance.getAllVideos(),
+                );
+                if (!PlaybackCoordinator.instance.isShuffle) {
+                  PlaybackCoordinator.instance.toggleShuffle();
                 }
-              });
-            },
-          ),
+              },
+              icon: const Icon(CupertinoIcons.shuffle, size: 18),
+            ),
+          if (!_isSearching)
+            IconButton(
+              icon: Icon(CupertinoIcons.search),
+              onPressed: () {
+                setState(() {
+                  if (_isSearching) {
+                    _isSearching = false;
+                    _searchQuery = '';
+                    _searchController.clear();
+                  } else {
+                    _isSearching = true;
+                  }
+                });
+              },
+            ),
           IconButton(
-            icon: Icon(_isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded),
+            icon: Icon(
+              _isGridView
+                  ? Icons.view_list_rounded
+                  : CupertinoIcons.square_grid_2x2_fill,
+            ),
             tooltip: _isGridView ? 'Switch to List' : 'Switch to Grid',
             onPressed: _toggleView,
           ),
@@ -163,8 +218,13 @@ class _HomeScreenState extends State<HomeScreen> {
           final filteredVideos = _searchQuery.isEmpty
               ? allVideos
               : allVideos.where((v) {
-                  return v.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                      (v.author?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
+                  return v.title.toLowerCase().contains(
+                        _searchQuery.toLowerCase(),
+                      ) ||
+                      (v.author?.toLowerCase().contains(
+                            _searchQuery.toLowerCase(),
+                          ) ??
+                          false);
                 }).toList();
 
           if (allVideos.isEmpty) {
@@ -198,118 +258,105 @@ class _HomeScreenState extends State<HomeScreen> {
             physics: const BouncingScrollPhysics(),
             slivers: [
               // Header Section
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Your Library',
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 22,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${filteredVideos.length} ${filteredVideos.length == 1 ? 'video' : 'videos'} offline',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: theme.textTheme.bodySmall?.color,
-                            ),
-                          ),
-                        ],
-                      ),
-                      // Shuffle All Button
-                      if (filteredVideos.isNotEmpty)
-                        TextButton.icon(
-                          onPressed: () {
-                            PlaybackCoordinator.instance.loadPlaylist(filteredVideos);
-                            if (!PlaybackCoordinator.instance.isShuffle) {
-                              PlaybackCoordinator.instance.toggleShuffle();
-                            }
-                          },
-                          icon: const Icon(Icons.shuffle_rounded, size: 18),
-                          label: const Text('Shuffle Play'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppTheme.accentColor,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
+              // SliverToBoxAdapter(
+              //   child: Padding(
+              //     padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              //     child: Row(
+              //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              //       crossAxisAlignment: CrossAxisAlignment.center,
+              //       children: [
+              //         Text(
+              //           '${filteredVideos.length} ${filteredVideos.length == 1 ? 'video' : 'videos'} offline',
+              //           style: TextStyle(
+              //             fontSize: 13,
+              //             color: theme.textTheme.bodySmall?.color,
+              //           ),
+              //         ),
+
+              //         // Shuffle All Button
+              //         if (filteredVideos.isNotEmpty)
+              //           TextButton.icon(
+              //             onPressed: () {
+              //               PlaybackCoordinator.instance.loadPlaylist(
+              //                 filteredVideos,
+              //               );
+              //               if (!PlaybackCoordinator.instance.isShuffle) {
+              //                 PlaybackCoordinator.instance.toggleShuffle();
+              //               }
+              //             },
+              //             icon: const Icon(Icons.shuffle_rounded, size: 18),
+              //             label: const Text('Shuffle Play'),
+              //             style: TextButton.styleFrom(
+              //               foregroundColor: AppTheme.accentColor,
+              //               padding: const EdgeInsets.symmetric(
+              //                 horizontal: 12,
+              //                 vertical: 6,
+              //               ),
+              //             ),
+              //           ),
+              //       ],
+              //     ),
+              //   ),
+              // ),
 
               // Videos List / Grid
               if (_isGridView)
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                   sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 0.88,
-                    ),
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final video = filteredVideos[index];
-                        return VideoGridCard(
-                          video: video,
-                          onTap: () {
-                            PlaybackCoordinator.instance.loadPlaylist(
-                              filteredVideos,
-                              startIndex: index,
-                            );
-                          },
-                          onPlay: () {
-                            PlaybackCoordinator.instance.loadPlaylist(
-                              filteredVideos,
-                              startIndex: index,
-                            );
-                          },
-                          onDelete: () => _confirmDelete(context, video),
-                          onInfo: () => _showVideoInfo(context, video),
-                        );
-                      },
-                      childCount: filteredVideos.length,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 0.88,
+                        ),
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final video = filteredVideos[index];
+                      return VideoGridCard(
+                        video: video,
+                        onTap: () {
+                          PlaybackCoordinator.instance.loadPlaylist(
+                            filteredVideos,
+                            startIndex: index,
+                          );
+                        },
+                        onPlay: () {
+                          PlaybackCoordinator.instance.loadPlaylist(
+                            filteredVideos,
+                            startIndex: index,
+                          );
+                        },
+                        onDelete: () => _confirmDelete(context, video),
+                        onInfo: () => _showVideoInfo(context, video),
+                      );
+                    }, childCount: filteredVideos.length),
                   ),
                 )
               else
                 SliverPadding(
                   padding: const EdgeInsets.only(top: 8, bottom: 100),
                   sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final video = filteredVideos[index];
-                        return VideoCard(
-                          video: video,
-                          onTap: () {
-                            PlaybackCoordinator.instance.loadPlaylist(
-                              filteredVideos,
-                              startIndex: index,
-                            );
-                          },
-                          onPlay: () {
-                            PlaybackCoordinator.instance.loadPlaylist(
-                              filteredVideos,
-                              startIndex: index,
-                            );
-                          },
-                          onDelete: () => _confirmDelete(context, video),
-                          onInfo: () => _showVideoInfo(context, video),
-                        );
-                      },
-                      childCount: filteredVideos.length,
-                    ),
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final video = filteredVideos[index];
+                      return VideoCard(
+                        video: video,
+                        onTap: () {
+                          PlaybackCoordinator.instance.loadPlaylist(
+                            filteredVideos,
+                            startIndex: index,
+                          );
+                        },
+                        onPlay: () {
+                          PlaybackCoordinator.instance.loadPlaylist(
+                            filteredVideos,
+                            startIndex: index,
+                          );
+                        },
+                        onDelete: () => _confirmDelete(context, video),
+                        onInfo: () => _showVideoInfo(context, video),
+                      );
+                    }, childCount: filteredVideos.length),
                   ),
                 ),
             ],

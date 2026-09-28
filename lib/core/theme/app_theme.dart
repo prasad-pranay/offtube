@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   // Brand colors
-  static const Color accentColor = Color(0xFFFF2B55); // Crimson / Vivid Red-Coral
+  static const Color accentColor = Color(
+    0xFFFF2B55,
+  ); // Crimson / Vivid Red-Coral
   static const Color accentGradientStart = Color(0xFFFF3366);
   static const Color accentGradientEnd = Color(0xFFFF6584);
 
@@ -28,13 +30,14 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: darkBackground,
+      scaffoldBackgroundColor: Color(0xFF0F0F0F),
       colorScheme: const ColorScheme.dark(
         primary: accentColor,
         secondary: accentGradientStart,
         surface: darkSurface,
         onSurface: darkTextPrimary,
         outline: darkDivider,
+        tertiary: Color(0xFFA9A9A9),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: darkBackground,
@@ -62,7 +65,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: darkSurface,
+        backgroundColor: Color(0xFF0F0F0F),
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -88,6 +91,7 @@ class AppTheme {
         surface: lightSurface,
         onSurface: lightTextPrimary,
         outline: lightDivider,
+        tertiary: Color(0xff333333),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: lightBackground,

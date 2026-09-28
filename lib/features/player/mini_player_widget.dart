@@ -46,7 +46,7 @@ class MiniPlayerWidget extends StatelessWidget {
               }
             },
             child: Container(
-              margin: const EdgeInsets.fromLTRB(12, 0, 95, 8),
+              margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
               decoration: BoxDecoration(
                 color: theme.cardTheme.color,
                 borderRadius: BorderRadius.circular(16),
