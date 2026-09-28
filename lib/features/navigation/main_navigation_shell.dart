@@ -12,10 +12,7 @@ import '../player/fullscreen_player_screen.dart';
 class MainNavigationShell extends StatefulWidget {
   final VoidCallback onThemeChanged;
 
-  const MainNavigationShell({
-    super.key,
-    required this.onThemeChanged,
-  });
+  const MainNavigationShell({super.key, required this.onThemeChanged});
 
   @override
   State<MainNavigationShell> createState() => _MainNavigationShellState();
@@ -55,15 +52,10 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         pageBuilder: (context, anim1, anim2) => const FullscreenPlayerScreen(),
         transitionsBuilder: (context, anim, secondaryAnim, child) {
           return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 1),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: anim,
-                curve: Curves.easeOutCubic,
-              ),
-            ),
+            position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+                .animate(
+                  CurvedAnimation(parent: anim, curve: Curves.easeOutCubic),
+                ),
             child: child,
           );
         },
@@ -85,19 +77,14 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
       body: Stack(
         children: [
           // Current Selected Page
-          IndexedStack(
-            index: _currentIndex,
-            children: screens,
-          ),
+          IndexedStack(index: _currentIndex, children: screens),
 
           // Persistent Mini Player above Bottom Navigation
           Positioned(
             left: 0,
             right: 0,
-            bottom: 0,
-            child: MiniPlayerWidget(
-              onExpand: _openFullscreenPlayer,
-            ),
+            bottom: 8,
+            child: MiniPlayerWidget(onExpand: _openFullscreenPlayer),
           ),
         ],
       ),
@@ -114,7 +101,10 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         destinations: [
           const NavigationDestination(
             icon: Icon(Icons.video_library_outlined),
-            selectedIcon: Icon(Icons.video_library_rounded, color: AppTheme.accentColor),
+            selectedIcon: Icon(
+              Icons.video_library_rounded,
+              color: AppTheme.accentColor,
+            ),
             label: 'Library',
           ),
           NavigationDestination(
@@ -132,23 +122,33 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
                 return const Icon(Icons.download_outlined);
               },
             ),
-            selectedIcon: const Icon(Icons.download_rounded, color: AppTheme.accentColor),
+            selectedIcon: const Icon(
+              Icons.download_rounded,
+              color: AppTheme.accentColor,
+            ),
             label: 'Downloads',
           ),
           const NavigationDestination(
             icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings_rounded, color: AppTheme.accentColor),
+            selectedIcon: Icon(
+              Icons.settings_rounded,
+              color: AppTheme.accentColor,
+            ),
             label: 'Settings',
           ),
         ],
       ),
-      floatingActionButton: _currentIndex == 0
-          ? FloatingActionButton(
-              onPressed: () => _openAddVideoModal(),
-              backgroundColor: AppTheme.accentColor,
-              foregroundColor: Colors.white,
-              elevation: 4,
-              child: const Icon(Icons.add_rounded, size: 28),
+      floatingActionButton: _currentIndex < 2
+          ? SizedBox(
+              width: 67,
+              height: 67,
+              child: FloatingActionButton(
+                onPressed: () => _openAddVideoModal(),
+                backgroundColor: AppTheme.accentColor,
+                foregroundColor: Colors.white,
+                elevation: 4,
+                child: const Icon(Icons.add_rounded, size: 32),
+              ),
             )
           : null,
     );

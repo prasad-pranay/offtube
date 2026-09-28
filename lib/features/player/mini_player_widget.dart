@@ -6,10 +6,7 @@ import '../../services/playback/playback_coordinator.dart';
 class MiniPlayerWidget extends StatelessWidget {
   final VoidCallback onExpand;
 
-  const MiniPlayerWidget({
-    super.key,
-    required this.onExpand,
-  });
+  const MiniPlayerWidget({super.key, required this.onExpand});
 
   @override
   Widget build(BuildContext context) {
@@ -29,8 +26,8 @@ class MiniPlayerWidget extends StatelessWidget {
         final hasThumb = thumbFile.existsSync();
         final progress = coordinator.duration.inMilliseconds > 0
             ? (coordinator.position.inMilliseconds /
-                    coordinator.duration.inMilliseconds)
-                .clamp(0.0, 1.0)
+                      coordinator.duration.inMilliseconds)
+                  .clamp(0.0, 1.0)
             : 0.0;
 
         return Dismissible(
@@ -43,12 +40,13 @@ class MiniPlayerWidget extends StatelessWidget {
             onTap: onExpand,
             onVerticalDragEnd: (details) {
               // Swipe up to expand
-              if (details.primaryVelocity != null && details.primaryVelocity! < -200) {
+              if (details.primaryVelocity != null &&
+                  details.primaryVelocity! < -200) {
                 onExpand();
               }
             },
             child: Container(
-              margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              margin: const EdgeInsets.fromLTRB(12, 0, 95, 8),
               decoration: BoxDecoration(
                 color: theme.cardTheme.color,
                 borderRadius: BorderRadius.circular(16),
@@ -58,7 +56,9 @@ class MiniPlayerWidget extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withAlpha(theme.brightness == Brightness.dark ? 80 : 30),
+                    color: Colors.black.withAlpha(
+                      theme.brightness == Brightness.dark ? 80 : 30,
+                    ),
                     blurRadius: 16,
                     offset: const Offset(0, 4),
                   ),
@@ -74,10 +74,15 @@ class MiniPlayerWidget extends StatelessWidget {
                       value: progress,
                       minHeight: 2.5,
                       backgroundColor: Colors.transparent,
-                      valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.accentColor),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        AppTheme.accentColor,
+                      ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
                       child: Row(
                         children: [
                           // Thumbnail
@@ -89,7 +94,11 @@ class MiniPlayerWidget extends StatelessWidget {
                               color: theme.colorScheme.surface,
                               child: hasThumb
                                   ? Image.file(thumbFile, fit: BoxFit.cover)
-                                  : const Icon(Icons.play_circle_fill, color: AppTheme.accentColor, size: 24),
+                                  : const Icon(
+                                      Icons.play_circle_fill,
+                                      color: AppTheme.accentColor,
+                                      size: 24,
+                                    ),
                             ),
                           ),
                           const SizedBox(width: 12),
