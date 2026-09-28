@@ -82,9 +82,14 @@ class OfflineAudioHandler extends BaseAudioHandler with SeekHandler {
     mediaItem.add(item);
 
     try {
-      // Stop & reset player before loading a new source to prevent decoder overlap
-      await _player.stop();
-      await _player.setFilePath(videoPath, initialPosition: initialPosition);
+      // Load file directly without calling stop(), preventing AudioService from
+      // prematurely shutting down the background foreground service on idle state.
+      if (initialPosition != null && initialPosition > Duration.zero) {
+        await _player.setFilePath(videoPath, initialPosition: initialPosition);
+      } else {
+        await _player.setFilePath(videoPath);
+      }
+      await _player.setVolume(1.0);
     } catch (e) {
       debugPrint('Error setting file path in audio handler: $e');
     }

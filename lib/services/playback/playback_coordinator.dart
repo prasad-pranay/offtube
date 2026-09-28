@@ -48,18 +48,19 @@ class PlaybackCoordinator extends ChangeNotifier with WidgetsBindingObserver {
   bool _isAppInBackground = false;
 
   // Guards & Tokens
-  bool _isEndHandled = false;            // prevents _onVideoEnded firing multiple times
-  int _activeSwitchId = 0;               // token to discard stale async song switches
-  bool _wasFullyBackgrounded = false;    // true only after paused/hidden, NOT after inactive
-  Timer? _positionTicker;                // periodic UI position update from just_audio
+  bool _isEndHandled = false; // prevents _onVideoEnded firing multiple times
+  int _activeSwitchId = 0; // token to discard stale async song switches
+  bool _wasFullyBackgrounded =
+      false; // true only after paused/hidden, NOT after inactive
+  Timer? _positionTicker; // periodic UI position update from just_audio
 
   // ─── Getters ────────────────────────────────────────────────────────────────
 
   VideoPlayerController? get videoController => _videoController;
   VideoModel? get currentVideo =>
       (_currentIndex >= 0 && _currentIndex < _activeList.length)
-          ? _activeList[_currentIndex]
-          : null;
+      ? _activeList[_currentIndex]
+      : null;
   bool get isPlaying => _isPlaying;
   Duration get position => _position;
   Duration get duration => _duration;
@@ -93,28 +94,26 @@ class PlaybackCoordinator extends ChangeNotifier with WidgetsBindingObserver {
           androidNotificationIcon: 'mipmap/ic_launcher',
         ),
       );
-
-      // Wire up notification bar buttons → coordinator (keeps video + state in sync)
-      _audioHandler?.onSkipToNext = playNext;
-      _audioHandler?.onSkipToPrevious = playPrevious;
-      _audioHandler?.onPlay = play;    // notification play  → coordinator.play()
-      _audioHandler?.onPause = pause;  // notification pause → coordinator.pause()
-
-      // NOTE: We intentionally do NOT listen to playbackState for play/pause toggling.
-      // The OfflineAudioHandler.play() and pause() overrides already relay notification
-      // bar button presses directly. Listening here caused race conditions where the
-      // AudioService state flicker during foreground sync triggered unwanted pause() calls.
-
-      // Background-safe completion detection via just_audio stream
-      _audioHandler?.player.processingStateStream.listen((state) {
-        if (state == ProcessingState.completed && !_isEndHandled) {
-          _isEndHandled = true;
-          _onVideoEnded();
-        }
-      });
     } catch (e) {
       debugPrint('AudioService init note: $e');
+      _audioHandler = OfflineAudioHandler();
     }
+    _audioHandler ??= OfflineAudioHandler();
+
+    // Wire up notification bar buttons → coordinator (keeps video + state in sync)
+    _audioHandler?.onSkipToNext = playNext;
+    _audioHandler?.onSkipToPrevious = playPrevious;
+    _audioHandler?.onPlay = play; // notification play  → coordinator.play()
+    _audioHandler?.onPause =
+        pause; // notification pause → coordinator.pause()
+
+    // Background-safe completion detection via just_audio stream
+    _audioHandler?.player.processingStateStream.listen((state) {
+      if (state == ProcessingState.completed && !_isEndHandled) {
+        _isEndHandled = true;
+        _onVideoEnded();
+      }
+    });
     _isInitialized = true;
   }
 
@@ -158,7 +157,9 @@ class PlaybackCoordinator extends ChangeNotifier with WidgetsBindingObserver {
   /// Seeks the muted VideoPlayerController to the current just_audio position
   /// and resumes video rendering when the app comes back to the foreground.
   Future<void> _syncVideoToAudio() async {
-    if (_videoController == null || !_videoController!.value.isInitialized) return;
+    if (_videoController == null || !_videoController!.value.isInitialized) {
+      return;
+    }
     try {
       final audioPos = _audioHandler?.player.position ?? _position;
       // Only seek if the drift is more than 1 second to avoid unnecessary stutter
@@ -243,10 +244,16 @@ class PlaybackCoordinator extends ChangeNotifier with WidgetsBindingObserver {
       return;
     }
 
-    if (switchId != _activeSwitchId) return; // Stale request cancelled by newer tap
+    if (switchId != _activeSwitchId) {
+      return; // Stale request cancelled by newer tap
+    }
 
-    // Initialize Video Player for video frames
-    final newVideoController = VideoPlayerController.file(file);
+    // Initialize Video Player for video frames with mixWithOthers: true
+    // so it renders video frames without fighting just_audio for system audio focus.
+    final newVideoController = VideoPlayerController.file(
+      file,
+      videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+    );
     try {
       await newVideoController.initialize();
     } catch (e) {
@@ -261,9 +268,21 @@ class PlaybackCoordinator extends ChangeNotifier with WidgetsBindingObserver {
     _videoController = newVideoController;
     if (_videoController!.value.isInitialized) {
       _duration = _videoController!.value.duration;
-      await _videoController!.setVolume(0.0); // Muted; audio comes from just_audio
+      await _videoController!.setVolume(
+        0.0,
+      ); // Muted; audio comes from just_audio
       await _videoController!.setPlaybackSpeed(_playbackSpeed);
       _videoController!.addListener(_onVideoControllerUpdate);
+    }
+
+    // Ensure audio handler is always initialized (with fallback if needed)
+    if (_audioHandler == null) {
+      try {
+        await init();
+      } catch (e) {
+        debugPrint('playVideo audioHandler init fallback note: $e');
+      }
+      _audioHandler ??= OfflineAudioHandler();
     }
 
     // Initialize just_audio for background-safe sound
@@ -292,8 +311,7 @@ class PlaybackCoordinator extends ChangeNotifier with WidgetsBindingObserver {
         if (_videoController != null && _videoController!.value.isInitialized)
           _videoController!.play(),
         // Use .player directly to avoid re-triggering the onPlay callback loop
-        if (_audioHandler != null)
-          _audioHandler!.player.play(),
+        if (_audioHandler != null) _audioHandler!.player.play(),
       ]);
     } catch (e) {
       debugPrint('Playback start error: $e');
@@ -315,7 +333,9 @@ class PlaybackCoordinator extends ChangeNotifier with WidgetsBindingObserver {
     // Use just_audio position as the authoritative position since it's the real audio source.
     // Fall back to video controller position if just_audio isn't available.
     final audioPos = _audioHandler?.player.position;
-    _position = (audioPos != null && audioPos > Duration.zero) ? audioPos : val.position;
+    _position = (audioPos != null && audioPos > Duration.zero)
+        ? audioPos
+        : val.position;
 
     if (val.duration > Duration.zero) {
       _duration = val.duration;
@@ -352,8 +372,7 @@ class PlaybackCoordinator extends ChangeNotifier with WidgetsBindingObserver {
         if (_videoController != null && _videoController!.value.isInitialized)
           _videoController!.play(),
         // Use .player directly to avoid re-triggering the onPlay callback loop
-        if (_audioHandler != null)
-          _audioHandler!.player.play(),
+        if (_audioHandler != null) _audioHandler!.player.play(),
       ]);
     } catch (e) {
       debugPrint('Play error: $e');
@@ -370,8 +389,7 @@ class PlaybackCoordinator extends ChangeNotifier with WidgetsBindingObserver {
         if (_videoController != null && _videoController!.value.isInitialized)
           _videoController!.pause(),
         // Use .player directly to avoid re-triggering the onPause callback loop
-        if (_audioHandler != null)
-          _audioHandler!.player.pause(),
+        if (_audioHandler != null) _audioHandler!.player.pause(),
       ]);
     } catch (e) {
       debugPrint('Pause error: $e');
