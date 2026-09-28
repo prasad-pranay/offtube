@@ -100,12 +100,9 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         },
         destinations: [
           const NavigationDestination(
-            icon: Icon(Icons.video_library_outlined),
-            selectedIcon: Icon(
-              Icons.video_library_rounded,
-              color: AppTheme.accentColor,
-            ),
-            label: 'Library',
+            icon: Icon(Icons.home),
+            selectedIcon: Icon(Icons.home, color: AppTheme.accentColor),
+            label: 'Home',
           ),
           NavigationDestination(
             icon: ListenableBuilder(

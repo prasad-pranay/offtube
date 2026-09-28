@@ -6,12 +6,17 @@ import 'package:just_audio/just_audio.dart';
 class OfflineAudioHandler extends BaseAudioHandler with SeekHandler {
   final AudioPlayer _player = AudioPlayer();
 
+  /// When true, play()/pause() directly invoke just_audio without calling
+  /// the coordinator callbacks — used by the coordinator itself to avoid loops.
+  bool _calledInternally = false;
+
   /// Callbacks wired up by PlaybackCoordinator so notification bar
   /// buttons forward to the coordinator (keeps video + state in sync).
   VoidCallback? onSkipToNext;
   VoidCallback? onSkipToPrevious;
   VoidCallback? onPlay;   // notification play button → coordinator.play()
   VoidCallback? onPause;  // notification pause button → coordinator.pause()
+  void Function(Duration)? onSeek; // notification seek bar slider → coordinator.seekTo()
 
   OfflineAudioHandler() {
     _initAudioEvents();
@@ -66,6 +71,7 @@ class OfflineAudioHandler extends BaseAudioHandler with SeekHandler {
     String? author,
     required String videoPath,
     String? thumbnailPath,
+    Duration? duration,
     Duration? initialPosition,
   }) async {
     final item = MediaItem(
@@ -73,6 +79,7 @@ class OfflineAudioHandler extends BaseAudioHandler with SeekHandler {
       title: title,
       artist: author ?? 'OfflineTube',
       album: 'Downloaded Videos',
+      duration: duration,
       artUri: (thumbnailPath != null && File(thumbnailPath).existsSync())
           ? Uri.file(thumbnailPath)
           : null,
@@ -84,10 +91,13 @@ class OfflineAudioHandler extends BaseAudioHandler with SeekHandler {
     try {
       // Load file directly without calling stop(), preventing AudioService from
       // prematurely shutting down the background foreground service on idle state.
-      if (initialPosition != null && initialPosition > Duration.zero) {
-        await _player.setFilePath(videoPath, initialPosition: initialPosition);
-      } else {
-        await _player.setFilePath(videoPath);
+      final loadedDuration = (initialPosition != null && initialPosition > Duration.zero)
+          ? await _player.setFilePath(videoPath, initialPosition: initialPosition)
+          : await _player.setFilePath(videoPath);
+
+      final finalDuration = loadedDuration ?? duration ?? _player.duration;
+      if (finalDuration != null) {
+        mediaItem.add(item.copyWith(duration: finalDuration));
       }
       await _player.setVolume(1.0);
     } catch (e) {
@@ -95,11 +105,33 @@ class OfflineAudioHandler extends BaseAudioHandler with SeekHandler {
     }
   }
 
+  /// Called by the coordinator to start audio playback without triggering
+  /// the onPlay callback (which would cause an infinite loop).
+  Future<void> playInternal() async {
+    _calledInternally = true;
+    try {
+      await _player.play();
+    } finally {
+      _calledInternally = false;
+    }
+  }
+
+  /// Called by the coordinator to pause audio without triggering the onPause
+  /// callback (which would cause an infinite loop).
+  Future<void> pauseInternal() async {
+    _calledInternally = true;
+    try {
+      await _player.pause();
+    } finally {
+      _calledInternally = false;
+    }
+  }
+
   @override
   Future<void> play() async {
-    // If a callback is wired, let the coordinator drive both players.
-    // Otherwise fall back to controlling just_audio directly.
-    if (onPlay != null) {
+    // This is triggered by the notification bar play button.
+    // If the coordinator wired a callback, delegate to it so video stays in sync.
+    if (!_calledInternally && onPlay != null) {
       onPlay!();
     } else {
       await _player.play();
@@ -108,7 +140,7 @@ class OfflineAudioHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> pause() async {
-    if (onPause != null) {
+    if (!_calledInternally && onPause != null) {
       onPause!();
     } else {
       await _player.pause();
@@ -116,7 +148,10 @@ class OfflineAudioHandler extends BaseAudioHandler with SeekHandler {
   }
 
   @override
-  Future<void> seek(Duration position) => _player.seek(position);
+  Future<void> seek(Duration position) async {
+    await _player.seek(position);
+    onSeek?.call(position);
+  }
 
   @override
   Future<void> stop() async {

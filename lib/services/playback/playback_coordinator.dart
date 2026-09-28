@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/widgets.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:video_player/video_player.dart';
 import '../../data/models/video_model.dart';
 import 'offline_audio_handler.dart';
@@ -87,9 +88,10 @@ class PlaybackCoordinator extends ChangeNotifier with WidgetsBindingObserver {
         // Keep the foreground service alive even when paused so Android doesn't
         // kill the audio service and interrupt background playback.
         config: AudioServiceConfig(
-          androidNotificationChannelId: 'com.offlinetube.app.channel.audio',
+          androidNotificationChannelId: 'com.offlinetube.app.channel.audio.v2',
           androidNotificationChannelName: 'OfflineTube Playback',
-          androidNotificationOngoing: true,
+          androidNotificationChannelDescription:
+              'OfflineTube media playback controls',
           androidStopForegroundOnPause: false,
           androidNotificationIcon: 'mipmap/ic_launcher',
         ),
@@ -100,12 +102,24 @@ class PlaybackCoordinator extends ChangeNotifier with WidgetsBindingObserver {
     }
     _audioHandler ??= OfflineAudioHandler();
 
+    // Request notification permission on Android 13+ so media controls show in notification shade
+    try {
+      await Permission.notification.request();
+    } catch (e) {
+      debugPrint('Notification permission note: $e');
+    }
+
     // Wire up notification bar buttons → coordinator (keeps video + state in sync)
     _audioHandler?.onSkipToNext = playNext;
     _audioHandler?.onSkipToPrevious = playPrevious;
     _audioHandler?.onPlay = play; // notification play  → coordinator.play()
-    _audioHandler?.onPause =
-        pause; // notification pause → coordinator.pause()
+    _audioHandler?.onPause = pause; // notification pause → coordinator.pause()
+    _audioHandler?.onSeek = (position) {
+      // notification seek bar slider → keep video controller & state in sync
+      _videoController?.seekTo(position);
+      _position = position;
+      notifyListeners();
+    };
 
     // Background-safe completion detection via just_audio stream
     _audioHandler?.player.processingStateStream.listen((state) {
@@ -293,6 +307,9 @@ class PlaybackCoordinator extends ChangeNotifier with WidgetsBindingObserver {
         author: video.author,
         videoPath: video.videoPath,
         thumbnailPath: video.thumbnailPath,
+        duration: video.durationSeconds > 0
+            ? Duration(seconds: video.durationSeconds)
+            : (_duration > Duration.zero ? _duration : null),
         initialPosition: Duration.zero,
       );
       await _audioHandler?.setSpeed(_playbackSpeed);
@@ -310,8 +327,10 @@ class PlaybackCoordinator extends ChangeNotifier with WidgetsBindingObserver {
       await Future.wait([
         if (_videoController != null && _videoController!.value.isInitialized)
           _videoController!.play(),
-        // Use .player directly to avoid re-triggering the onPlay callback loop
-        if (_audioHandler != null) _audioHandler!.player.play(),
+        // Use playInternal() — goes through BaseAudioHandler so audio_service
+        // starts the Android foreground service and shows the media notification,
+        // but avoids triggering the onPlay callback loop back into coordinator.
+        if (_audioHandler != null) _audioHandler!.playInternal(),
       ]);
     } catch (e) {
       debugPrint('Playback start error: $e');
@@ -371,8 +390,7 @@ class PlaybackCoordinator extends ChangeNotifier with WidgetsBindingObserver {
       await Future.wait([
         if (_videoController != null && _videoController!.value.isInitialized)
           _videoController!.play(),
-        // Use .player directly to avoid re-triggering the onPlay callback loop
-        if (_audioHandler != null) _audioHandler!.player.play(),
+        if (_audioHandler != null) _audioHandler!.playInternal(),
       ]);
     } catch (e) {
       debugPrint('Play error: $e');
@@ -388,8 +406,7 @@ class PlaybackCoordinator extends ChangeNotifier with WidgetsBindingObserver {
       await Future.wait([
         if (_videoController != null && _videoController!.value.isInitialized)
           _videoController!.pause(),
-        // Use .player directly to avoid re-triggering the onPause callback loop
-        if (_audioHandler != null) _audioHandler!.player.pause(),
+        if (_audioHandler != null) _audioHandler!.pauseInternal(),
       ]);
     } catch (e) {
       debugPrint('Pause error: $e');
