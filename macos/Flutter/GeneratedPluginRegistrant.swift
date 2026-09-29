@@ -10,6 +10,7 @@ import audio_session
 import flutter_local_notifications
 import just_audio
 import path_provider_foundation
+import share_plus
 import sqflite_darwin
 import video_player_avfoundation
 import ytdlp_flutter
@@ -20,6 +21,7 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   FlutterLocalNotificationsPlugin.register(with: registry.registrar(forPlugin: "FlutterLocalNotificationsPlugin"))
   JustAudioPlugin.register(with: registry.registrar(forPlugin: "JustAudioPlugin"))
   PathProviderPlugin.register(with: registry.registrar(forPlugin: "PathProviderPlugin"))
+  SharePlusMacosPlugin.register(with: registry.registrar(forPlugin: "SharePlusMacosPlugin"))
   SqflitePlugin.register(with: registry.registrar(forPlugin: "SqflitePlugin"))
   VideoPlayerPlugin.register(with: registry.registrar(forPlugin: "VideoPlayerPlugin"))
   YtdlpFlutterPlugin.register(with: registry.registrar(forPlugin: "YtdlpFlutterPlugin"))

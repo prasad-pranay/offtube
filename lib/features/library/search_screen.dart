@@ -3,11 +3,12 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:offlinetube/features/downloader/widgets/quality_selection_sheet.dart';
+import 'package:offlinetube/features/library/stream_page.dart';
+import 'package:offlinetube/services/PlayerManager.dart';
 import 'package:offlinetube/services/extractor/video_extractor_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../services/database/database_service.dart';
 import '../../services/playback/playback_coordinator.dart';
-import 'package:ytdlp_flutter/ytdlp_flutter.dart' as ytdlp;
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -118,12 +119,64 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     setState(() {
-      results.addAll(res);
+      // results.clear();
+      // results.addAll(res);
+      results = List<Map<String, dynamic>>.from(res);
       resultScreen = true;
     });
   }
 
   bool resultScreen = false;
+
+  List<String> _suggestions = [];
+
+  Future<void> getYoutubeSuggestions() async {
+    if (queryText.trim().isEmpty) {
+      setState(() {
+        _suggestions.clear();
+        return;
+      });
+    }
+    ;
+
+    final uri = Uri.parse(
+      'https://suggestqueries.google.com/complete/search'
+      '?client=youtube&ds=yt&q=${Uri.encodeComponent(queryText)}',
+    );
+
+    final response = await http.get(uri);
+
+    if (response.statusCode != 200) {
+      _suggestions.clear();
+      return;
+    }
+    try {
+      String body = response.body;
+
+      // Remove JSONP wrapper:
+      final start = body.indexOf('(');
+      final end = body.lastIndexOf(')');
+
+      if (start == -1 || end == -1) {
+        _suggestions.clear();
+        return;
+      }
+
+      body = body.substring(start + 1, end);
+
+      final data = jsonDecode(body);
+
+      setState(() {
+        _suggestions = List<String>.from(
+          data[1].map((item) => item[0].toString()),
+        );
+      });
+    } catch (e) {
+      print('Suggestion error: $e');
+      _suggestions.clear();
+      return;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -152,9 +205,10 @@ class _SearchScreenState extends State<SearchScreen> {
         title: TextField(
           controller: _searchController,
           focusNode: widget.focusNode,
-          autofocus: true,
+          // autofocus: true,
           onSubmitted: (value) => search(),
           onChanged: (value) {
+            getYoutubeSuggestions();
             setState(() {
               if (resultScreen) {
                 resultScreen = false;
@@ -213,6 +267,8 @@ class _SearchScreenState extends State<SearchScreen> {
         valueListenable: DatabaseService.instance.getVideosListenable(),
         builder: (context, box, _) {
           final allVideos = DatabaseService.instance.getAllVideos();
+          final videoIds = allVideos.map((e) => e.id).toList();
+
           final query = queryText.trim().toLowerCase();
           final filterVideo = query.isEmpty
               ? allVideos
@@ -330,7 +386,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     }, childCount: filterVideo.length),
                   ),
                 ),
-              if (!resultScreen && filterVideo.isEmpty)
+              if (!resultScreen && filterVideo.isEmpty && _suggestions.isEmpty)
                 SliverToBoxAdapter(
                   child: SizedBox(
                     child: Container(
@@ -416,24 +472,70 @@ class _SearchScreenState extends State<SearchScreen> {
                     ),
                   ),
                 ),
+              if (!resultScreen &&
+                  filterVideo.isEmpty &&
+                  _suggestions.isNotEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final suggestion = _suggestions[index];
 
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                          ),
+                          leading: const Icon(Icons.search),
+                          title: Text(suggestion),
+                          onTap: () {
+                            _searchController.text = suggestion;
+                            search();
+
+                            setState(() {
+                              _suggestions.clear();
+                              widget.focusNode.unfocus();
+                            });
+                          },
+                        );
+                      },
+                      childCount: _suggestions.length > 10
+                          ? 10
+                          : _suggestions.length,
+                    ),
+                  ),
+                ),
               if (resultScreen)
                 SliverPadding(
                   padding: const EdgeInsets.only(top: 8, bottom: 100),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final video = results[index];
+                      final isDownloaded = videoIds.contains(video['id']);
                       return InkWell(
                         onTap: () async {
+                          widget.focusNode.unfocus();
                           final info = await VideoExtractorService.instance
                               .extractInfo(
                                 "https://www.youtube.com/watch?v=${video['id']}",
                               );
-                          // Open quality selection sheet
-                          showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            builder: (ctx) => QualitySelectionSheet(info: info),
+
+                          await PlayerManager.instance.playVideo(info);
+
+                          if (!context.mounted) return;
+
+                          Navigator.push(
+                            context,
+                            PageRouteBuilder(
+                              opaque: false,
+                              barrierColor: Colors.transparent,
+                              transitionDuration: Duration.zero,
+                              reverseTransitionDuration: Duration.zero,
+                              pageBuilder:
+                                  (context, animation, secondaryAnimation) {
+                                    return const StreamVideoPage();
+                                  },
+                            ),
                           );
                         },
                         child: Column(
@@ -456,26 +558,27 @@ class _SearchScreenState extends State<SearchScreen> {
                                               _buildPlaceholder(context),
                                     ),
                                   ),
+
                                   // Duration badge
-                                  Positioned(
-                                    bottom: 0,
-                                    right: 0,
-                                    child: Container(
-                                      margin: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 8,
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 3,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withAlpha(200),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Icon(CupertinoIcons.eye, size: 15),
-                                    ),
-                                  ),
+                                  // Positioned(
+                                  //   bottom: 0,
+                                  //   right: 0,
+                                  //   child: Container(
+                                  //     margin: const EdgeInsets.symmetric(
+                                  //       horizontal: 10,
+                                  //       vertical: 8,
+                                  //     ),
+                                  //     padding: const EdgeInsets.symmetric(
+                                  //       horizontal: 10,
+                                  //       vertical: 3,
+                                  //     ),
+                                  //     decoration: BoxDecoration(
+                                  //       color: Colors.black.withAlpha(200),
+                                  //       borderRadius: BorderRadius.circular(10),
+                                  //     ),
+                                  //     child: Icon(CupertinoIcons.eye, size: 15),
+                                  //   ),
+                                  // ),
                                 ],
                               ),
                             ),
@@ -488,52 +591,112 @@ class _SearchScreenState extends State<SearchScreen> {
                                   right: 10,
                                   bottom: 25,
                                 ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.start,
+                                child: Row(
                                   children: [
-                                    Text(
-                                      "${video['title']}",
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: theme.textTheme.bodyMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 16,
-                                            height: 1.25,
-                                          ),
-                                    ),
-                                    SizedBox(height: 5),
-                                    Row(
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.start,
                                       children: [
-                                        Icon(
-                                          CupertinoIcons.music_note,
-                                          size: 14,
-                                          color: theme.colorScheme.tertiary,
-                                        ),
-                                        SizedBox(width: 5),
-                                        Text(
-                                          "${video['author']}",
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: theme.colorScheme.tertiary,
+                                        SizedBox(
+                                          width: size.width - 70,
+                                          child: Text(
+                                            "${video['title']}",
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: theme.textTheme.bodyMedium
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 16,
+                                                  height: 1.25,
+                                                ),
                                           ),
                                         ),
-                                        SizedBox(width: 15),
-                                        Icon(
-                                          CupertinoIcons.calendar,
-                                          size: 14,
-                                          color: theme.colorScheme.tertiary,
-                                        ),
-                                        SizedBox(width: 5),
-                                        Text(
-                                          formatTimeAgo(video['publishedAt']),
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: theme.colorScheme.tertiary,
-                                          ),
+                                        SizedBox(height: 5),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              CupertinoIcons.music_note,
+                                              size: 14,
+                                              color: theme.colorScheme.tertiary,
+                                            ),
+                                            SizedBox(width: 5),
+                                            Text(
+                                              "${video['author']}",
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color:
+                                                    theme.colorScheme.tertiary,
+                                              ),
+                                            ),
+                                            SizedBox(width: 15),
+                                            Icon(
+                                              CupertinoIcons.calendar,
+                                              size: 14,
+                                              color: theme.colorScheme.tertiary,
+                                            ),
+                                            SizedBox(width: 5),
+                                            Text(
+                                              formatTimeAgo(
+                                                video['publishedAt'],
+                                              ),
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color:
+                                                    theme.colorScheme.tertiary,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
+                                    ),
+                                    GestureDetector(
+                                      onTap: () async {
+                                        if (isDownloaded) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Padding(
+                                                padding: EdgeInsets.symmetric(
+                                                  vertical: 5,
+                                                ),
+                                                child: Text(
+                                                  "Video already downloaded",
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                          return;
+                                        }
+                                        final info = await VideoExtractorService
+                                            .instance
+                                            .extractInfo(
+                                              "https://www.youtube.com/watch?v=${video['id']}",
+                                            );
+                                        // Open quality selection sheet
+                                        showModalBottomSheet(
+                                          context: context,
+                                          isScrollControlled: true,
+                                          builder: (ctx) =>
+                                              QualitySelectionSheet(info: info),
+                                        );
+                                      },
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 8,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: theme.scaffoldBackgroundColor,
+                                        ),
+                                        child: Icon(
+                                          isDownloaded
+                                              ? Icons.check
+                                              : Icons.download_outlined,
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),

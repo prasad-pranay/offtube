@@ -353,6 +353,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             startIndex: index,
                           );
                         },
+                        path: video.videoPath,
                         onDelete: () => _confirmDelete(context, video),
                         onInfo: () => _showVideoInfo(context, video),
                       );

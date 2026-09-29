@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:offlinetube/features/library/search_screen.dart';
+import 'package:offlinetube/features/player/mini_player.dart';
 import '../../core/theme/app_theme.dart';
 import '../../services/share/share_intent_service.dart';
 import '../../services/download/download_manager.dart';
@@ -206,6 +207,8 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
               bottom: 8,
               child: MiniPlayerWidget(onExpand: _openFullscreenPlayer),
             ),
+
+            MiniPlayer(),
           ],
         ),
 

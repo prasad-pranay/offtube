@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:offlinetube/core/theme/app_theme.dart';
 import 'package:offlinetube/data/models/video_model.dart';
+import 'package:share_plus/share_plus.dart';
 
 class VideoCard extends StatelessWidget {
   final VideoModel video;
@@ -10,6 +11,7 @@ class VideoCard extends StatelessWidget {
   final VoidCallback onPlay;
   final VoidCallback onDelete;
   final VoidCallback onInfo;
+  final String path;
 
   const VideoCard({
     super.key,
@@ -18,7 +20,23 @@ class VideoCard extends StatelessWidget {
     required this.onPlay,
     required this.onDelete,
     required this.onInfo,
+    required this.path,
   });
+
+  Future<void> shareVideo(String path, String id) async {
+    // final directory = await getApplicationDocumentsDirectory();
+
+    final file = File('${path}');
+
+    if (!await file.exists()) return;
+
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path, mimeType: 'video/mp4')],
+        text: 'https://www.youtube.com/watch?v=$id',
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -188,6 +206,9 @@ class VideoCard extends StatelessWidget {
                       case 'info':
                         onInfo();
                         break;
+                      case 'share':
+                        shareVideo(path, video.id);
+                        break;
                       case 'delete':
                         onDelete();
                         break;
@@ -211,6 +232,16 @@ class VideoCard extends StatelessWidget {
                           Icon(Icons.info_outline_rounded, size: 20),
                           SizedBox(width: 10),
                           Text('Video details'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'share',
+                      child: Row(
+                        children: [
+                          Icon(Icons.share_rounded, size: 20),
+                          SizedBox(width: 10),
+                          Text('Share Video'),
                         ],
                       ),
                     ),
