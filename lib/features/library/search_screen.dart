@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:offlinetube/features/downloader/widgets/quality_selection_sheet.dart';
+import 'package:offlinetube/features/library/search_overlay.dart';
 import 'package:offlinetube/features/library/stream_page.dart';
 import 'package:offlinetube/services/PlayerManager.dart';
 import 'package:offlinetube/services/extractor/video_extractor_service.dart';
@@ -515,28 +516,75 @@ class _SearchScreenState extends State<SearchScreen> {
                       return InkWell(
                         onTap: () async {
                           widget.focusNode.unfocus();
-                          final info = await VideoExtractorService.instance
-                              .extractInfo(
-                                "https://www.youtube.com/watch?v=${video['id']}",
+                          // final info = await VideoExtractorService.instance
+                          //     .extractInfo(
+                          //       "https://www.youtube.com/watch?v=${video['id']}",
+                          //     );
+
+                          // await PlayerManager.instance.playVideo(info);
+
+                          // if (!context.mounted) return;
+
+                          // Navigator.push(
+                          //   context,
+                          //   PageRouteBuilder(
+                          //     opaque: false,
+                          //     barrierColor: Colors.transparent,
+                          //     transitionDuration: Duration.zero,
+                          //     reverseTransitionDuration: Duration.zero,
+                          //     pageBuilder:
+                          //         (context, animation, secondaryAnimation) {
+                          //           return const StreamVideoPage();
+                          //         },
+                          //   ),
+                          // );
+                          final overlay = OverlayEntry(
+                            builder: (context) {
+                              return VideoLoadingOverlay(
+                                thumbnail: video['thumbnailPath'],
+                                title: video['title'] ?? 'Loading video',
                               );
-
-                          await PlayerManager.instance.playVideo(info);
-
-                          if (!context.mounted) return;
-
-                          Navigator.push(
-                            context,
-                            PageRouteBuilder(
-                              opaque: false,
-                              barrierColor: Colors.transparent,
-                              transitionDuration: Duration.zero,
-                              reverseTransitionDuration: Duration.zero,
-                              pageBuilder:
-                                  (context, animation, secondaryAnimation) {
-                                    return const StreamVideoPage();
-                                  },
-                            ),
+                            },
                           );
+
+                          Overlay.of(context).insert(overlay);
+
+                          try {
+                            final info = await VideoExtractorService.instance
+                                .extractInfo(
+                                  "https://www.youtube.com/watch?v=${video['id']}",
+                                );
+
+                            await PlayerManager.instance.playVideo(info);
+
+                            overlay.remove();
+
+                            if (!context.mounted) return;
+
+                            Navigator.push(
+                              context,
+                              PageRouteBuilder(
+                                opaque: false,
+                                barrierColor: Colors.transparent,
+                                transitionDuration: Duration.zero,
+                                reverseTransitionDuration: Duration.zero,
+                                pageBuilder:
+                                    (context, animation, secondaryAnimation) {
+                                      return const StreamVideoPage();
+                                    },
+                              ),
+                            );
+                          } catch (e) {
+                            overlay.remove();
+
+                            if (!context.mounted) return;
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Could not play this video'),
+                              ),
+                            );
+                          }
                         },
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.center,

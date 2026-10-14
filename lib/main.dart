@@ -46,7 +46,10 @@ class _OfflineTubeAppState extends State<OfflineTubeApp> {
   }
 
   void _updateThemeMode() {
-    final modeSetting = DatabaseService.instance.getSetting<String>('theme_mode', 'dark');
+    final modeSetting = DatabaseService.instance.getSetting<String>(
+      'theme_mode',
+      'dark',
+    );
     setState(() {
       if (modeSetting == 'light') {
         _themeMode = ThemeMode.light;
@@ -66,9 +69,7 @@ class _OfflineTubeAppState extends State<OfflineTubeApp> {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: _themeMode,
-      home: MainNavigationShell(
-        onThemeChanged: _updateThemeMode,
-      ),
+      home: MainNavigationShell(onThemeChanged: _updateThemeMode),
     );
   }
 }

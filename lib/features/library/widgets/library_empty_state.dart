@@ -4,10 +4,7 @@ import 'package:offlinetube/core/theme/app_theme.dart';
 class LibraryEmptyState extends StatelessWidget {
   final VoidCallback onAddVideo;
 
-  const LibraryEmptyState({
-    super.key,
-    required this.onAddVideo,
-  });
+  const LibraryEmptyState({super.key, required this.onAddVideo});
 
   @override
   Widget build(BuildContext context) {
@@ -24,23 +21,23 @@ class LibraryEmptyState extends StatelessWidget {
               height: 96,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [
-                    AppTheme.accentColor.withAlpha(40),
-                    AppTheme.accentGradientEnd.withAlpha(20),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                border: Border.all(
-                  color: AppTheme.accentColor.withAlpha(60),
-                  width: 1.5,
-                ),
+                // gradient: LinearGradient(
+                //   colors: [
+                //     AppTheme.accentColor.withAlpha(40),
+                //     AppTheme.accentGradientEnd.withAlpha(20),
+                //   ],
+                //   begin: Alignment.topLeft,
+                //   end: Alignment.bottomRight,
+                // ),
+                // border: Border.all(
+                //   color: AppTheme.accentColor.withAlpha(60),
+                //   width: 1.5,
+                // ),
               ),
               child: const Icon(
                 Icons.video_library_outlined,
                 size: 44,
-                color: AppTheme.accentColor,
+                color: Colors.white,
               ),
             ),
             const SizedBox(height: 24),
@@ -66,15 +63,18 @@ class LibraryEmptyState extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: onAddVideo,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.accentColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                foregroundColor: AppTheme.accentColor,
+                backgroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
                 elevation: 0,
               ),
-              icon: const Icon(Icons.add_rounded, size: 20),
+              // icon: const Icon(Icons.add_rounded, size: 20),
               label: const Text(
                 'Add video',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),

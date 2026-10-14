@@ -95,7 +95,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
                     if (firstTouch) ...[
                       Positioned(
                         top: 50,
-                        left: 105,
+                        left: 55,
                         child: Container(
                           decoration: BoxDecoration(
                             color: Colors.black54,

@@ -146,7 +146,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: 8,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
                   color: isSelected
                       ? AppTheme.accentColor
@@ -208,7 +208,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
               child: MiniPlayerWidget(onExpand: _openFullscreenPlayer),
             ),
 
-            MiniPlayer(),
+            // MiniPlayer(),
           ],
         ),
 
@@ -247,7 +247,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
                 GestureDetector(
                   onTap: () => _openAddVideoModal(),
                   child: Container(
-                    margin: EdgeInsets.only(left: 15, right: 15, bottom: 10),
+                    margin: EdgeInsets.only(bottom: 10),
                     decoration: BoxDecoration(
                       color: Color(0xFF262626),
                       // color: theme.colorScheme.tertiary,
@@ -269,7 +269,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
                       return _buildNavItem(
                         icon: CupertinoIcons.cloud_download,
                         selectedIcon: CupertinoIcons.cloud_download_fill,
-                        label: 'Downloads',
+                        label: 'Download',
                         index: 1,
                         badgeCount: count,
                       );
