@@ -1,6 +1,7 @@
 class ExtractedFormat {
   final String formatId;
-  final String qualityLabel; // e.g. "1080p", "720p", "480p", "360p", "Audio Only"
+  final String
+  qualityLabel; // e.g. "1080p", "720p", "480p", "360p", "Audio Only"
   final int? height;
   final int? fps;
   final int? sizeBytes;
@@ -8,6 +9,7 @@ class ExtractedFormat {
   final bool hasVideo;
   final bool hasAudio;
   final String streamUrl;
+  final String? videoUrl;
 
   const ExtractedFormat({
     required this.formatId,
@@ -19,6 +21,7 @@ class ExtractedFormat {
     required this.hasVideo,
     required this.hasAudio,
     required this.streamUrl,
+    required this.videoUrl,
   });
 
   String get formattedSize {

@@ -23,6 +23,50 @@ class VideoExtractorService {
     }
   }
 
+  Future<List<ExtractedVideoInfo>> searchVideos(
+    String query, {
+    int limit = 10,
+  }) async {
+    try {
+      final results = await _ytExplode.search.search(
+        query,
+        filter: yt.TypeFilters.video,
+      );
+
+      final videos = <ExtractedVideoInfo>[];
+
+      for (final video in results) {
+        // Don't include duplicates.
+        if (videos.any((item) => item.id == video.id.value)) {
+          continue;
+        }
+
+        videos.add(
+          ExtractedVideoInfo(
+            id: video.id.value,
+            url: 'https://www.youtube.com/watch?v=${video.id.value}',
+            title: video.title,
+            description: null,
+            author: video.author,
+            thumbnailUrl: video.thumbnails.highResUrl.isNotEmpty
+                ? video.thumbnails.highResUrl
+                : video.thumbnails.standardResUrl,
+            durationSeconds: video.duration?.inSeconds ?? 0,
+            formats: const [],
+          ),
+        );
+
+        if (videos.length >= limit) break;
+      }
+
+      return videos;
+    } catch (e, stackTrace) {
+      debugPrint('Video search failed: $e');
+      debugPrintStack(stackTrace: stackTrace);
+      return [];
+    }
+  }
+
   /// Validate if URL is a valid web media URL
   bool isValidUrl(String url) {
     final uri = Uri.tryParse(url.trim());
@@ -47,11 +91,18 @@ class VideoExtractorService {
 
     // Try YouTubeExplode first (lightning fast Dart client-side extraction)
     try {
+      // final videoId = yt.VideoId(url);
+      // final video = await _ytExplode.videos.get(videoId);
+      // final manifest = await _ytExplode.videos.streamsClient.getManifest(
+      //   videoId,
+      // );
       final videoId = yt.VideoId(url);
-      final video = await _ytExplode.videos.get(videoId);
-      final manifest = await _ytExplode.videos.streamsClient.getManifest(
-        videoId,
-      );
+      final results = await Future.wait([
+        _ytExplode.videos.get(videoId),
+        _ytExplode.videos.streamsClient.getManifest(videoId),
+      ]);
+      final video = results[0] as yt.Video;
+      final manifest = results[1] as yt.StreamManifest;
 
       final List<ExtractedFormat> formats = [];
 
@@ -68,12 +119,24 @@ class VideoExtractorService {
             hasVideo: true,
             hasAudio: true,
             streamUrl: s.url.toString(),
+            videoUrl: s.url.toString(),
           ),
         );
       }
 
       // Audio only streams
       final bestAudio = manifest.audioOnly.withHighestBitrate();
+
+      // final Map<int, dynamic> smallest = {};
+
+      // for (final s in manifest.videoOnly) {
+      //   final h = s.videoResolution.height;
+      //   if (!smallest.containsKey(h) ||
+      //       s.size.totalBytes < smallest[h]!.size.totalBytes) {
+      //     smallest[h] = s;
+      //   }
+      // }
+
       formats.add(
         ExtractedFormat(
           formatId: 'audio_${bestAudio.tag}',
@@ -83,6 +146,7 @@ class VideoExtractorService {
           container: bestAudio.container.name,
           hasVideo: false,
           hasAudio: true,
+          videoUrl: null,
           streamUrl: bestAudio.url.toString(),
         ),
       );
@@ -145,6 +209,7 @@ class VideoExtractorService {
                   container: f['ext']?.toString() ?? 'mp4',
                   hasVideo: hasV,
                   hasAudio: hasA,
+                  videoUrl: null,
                   streamUrl: f['url']?.toString() ?? '',
                 ),
               );

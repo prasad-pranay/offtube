@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:offlinetube/features/downloader/widgets/quality_selection_sheet.dart';
 import 'package:offlinetube/features/library/search_overlay.dart';
 import 'package:offlinetube/features/library/stream_page.dart';
-import 'package:offlinetube/services/PlayerManager.dart';
+// import 'package:offlinetube/services/PlayerManager.dart';
 import 'package:offlinetube/services/extractor/video_extractor_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../services/database/database_service.dart';
@@ -516,75 +516,114 @@ class _SearchScreenState extends State<SearchScreen> {
                       return InkWell(
                         onTap: () async {
                           widget.focusNode.unfocus();
-                          // final info = await VideoExtractorService.instance
-                          //     .extractInfo(
-                          //       "https://www.youtube.com/watch?v=${video['id']}",
-                          //     );
 
-                          // await PlayerManager.instance.playVideo(info);
-
-                          // if (!context.mounted) return;
-
-                          // Navigator.push(
-                          //   context,
-                          //   PageRouteBuilder(
-                          //     opaque: false,
-                          //     barrierColor: Colors.transparent,
-                          //     transitionDuration: Duration.zero,
-                          //     reverseTransitionDuration: Duration.zero,
-                          //     pageBuilder:
-                          //         (context, animation, secondaryAnimation) {
-                          //           return const StreamVideoPage();
-                          //         },
-                          //   ),
-                          // );
                           final overlay = OverlayEntry(
-                            builder: (context) {
-                              return VideoLoadingOverlay(
-                                thumbnail: video['thumbnailPath'],
-                                title: video['title'] ?? 'Loading video',
-                              );
-                            },
+                            builder: (context) => VideoLoadingOverlay(
+                              thumbnail: video['thumbnailPath'],
+                              title: video['title'] ?? 'Loading video',
+                            ),
                           );
 
                           Overlay.of(context).insert(overlay);
+                          bool overlayRemoved = false;
+
+                          void removeOverlay() {
+                            if (!overlayRemoved) {
+                              overlayRemoved = true;
+                              overlay.remove();
+                            }
+                          }
 
                           try {
                             final info = await VideoExtractorService.instance
                                 .extractInfo(
-                                  "https://www.youtube.com/watch?v=${video['id']}",
+                                  'https://www.youtube.com/watch?v=${video['id']}',
                                 );
 
-                            await PlayerManager.instance.playVideo(info);
+                            if (!context.mounted) {
+                              removeOverlay();
+                              return;
+                            }
 
-                            overlay.remove();
-
-                            if (!context.mounted) return;
-
-                            Navigator.push(
+                            removeOverlay();
+                            await Navigator.push(
                               context,
                               PageRouteBuilder(
                                 opaque: false,
                                 barrierColor: Colors.transparent,
                                 transitionDuration: Duration.zero,
-                                reverseTransitionDuration: Duration.zero,
+                                maintainState: true,
                                 pageBuilder:
                                     (context, animation, secondaryAnimation) {
-                                      return const StreamVideoPage();
+                                      return StreamVideoPage(info: info);
                                     },
+                                reverseTransitionDuration: const Duration(
+                                  milliseconds: 180,
+                                ),
                               ),
                             );
-                          } catch (e) {
-                            overlay.remove();
+                          } catch (e, stackTrace) {
+                            removeOverlay();
+                            debugPrint('Failed to open stream page 1: $e');
+                            debugPrintStack(stackTrace: stackTrace);
 
                             if (!context.mounted) return;
 
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Could not play this video'),
+                              const SnackBar(
+                                content: Text('Could not load this video'),
                               ),
                             );
                           }
+
+                          // widget.focusNode.unfocus();
+                          // final overlay = OverlayEntry(
+                          //   builder: (context) {
+                          //     return VideoLoadingOverlay(
+                          //       thumbnail: video['thumbnailPath'],
+                          //       title: video['title'] ?? 'Loading video',
+                          //     );
+                          //   },
+                          // );
+
+                          // Overlay.of(context).insert(overlay);
+
+                          // try {
+                          //   final info = await VideoExtractorService.instance
+                          //       .extractInfo(
+                          //         "https://www.youtube.com/watch?v=${video['id']}",
+                          //       );
+
+                          //   await PlayerManager.instance.playVideo(info);
+
+                          //   overlay.remove();
+
+                          //   if (!context.mounted) return;
+                          //   // aaaaaaaaaaaaaaaaaaaaaa
+                          //   Navigator.push(
+                          //     context,
+                          //     PageRouteBuilder(
+                          //       opaque: false,
+                          //       barrierColor: Colors.transparent,
+                          //       transitionDuration: Duration.zero,
+                          //       reverseTransitionDuration: Duration.zero,
+                          //       pageBuilder:
+                          //           (context, animation, secondaryAnimation) {
+                          //             return const StreamVideoPage();
+                          //           },
+                          //     ),
+                          //   );
+                          // } catch (e) {
+                          //   overlay.remove();
+
+                          //   if (!context.mounted) return;
+
+                          //   ScaffoldMessenger.of(context).showSnackBar(
+                          //     SnackBar(
+                          //       content: Text('Could not play this video'),
+                          //     ),
+                          //   );
+                          // }
                         },
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.center,
@@ -606,27 +645,6 @@ class _SearchScreenState extends State<SearchScreen> {
                                               _buildPlaceholder(context),
                                     ),
                                   ),
-
-                                  // Duration badge
-                                  // Positioned(
-                                  //   bottom: 0,
-                                  //   right: 0,
-                                  //   child: Container(
-                                  //     margin: const EdgeInsets.symmetric(
-                                  //       horizontal: 10,
-                                  //       vertical: 8,
-                                  //     ),
-                                  //     padding: const EdgeInsets.symmetric(
-                                  //       horizontal: 10,
-                                  //       vertical: 3,
-                                  //     ),
-                                  //     decoration: BoxDecoration(
-                                  //       color: Colors.black.withAlpha(200),
-                                  //       borderRadius: BorderRadius.circular(10),
-                                  //     ),
-                                  //     child: Icon(CupertinoIcons.eye, size: 15),
-                                  //   ),
-                                  // ),
                                 ],
                               ),
                             ),

@@ -1,7 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:offlinetube/features/library/search_overlay.dart';
 import 'package:offlinetube/features/library/search_screen.dart';
+import 'package:offlinetube/features/library/stream_page.dart';
 import 'package:offlinetube/features/player/mini_player.dart';
+import 'package:offlinetube/services/extractor/video_extractor_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../services/share/share_intent_service.dart';
 import '../../services/download/download_manager.dart';
@@ -11,6 +14,8 @@ import '../downloader/add_video_modal.dart';
 import '../settings/settings_screen.dart';
 import '../player/mini_player_widget.dart';
 import '../player/fullscreen_player_screen.dart';
+import 'package:app_links/app_links.dart';
+import 'dart:async';
 
 class MainNavigationShell extends StatefulWidget {
   final VoidCallback onThemeChanged;
@@ -24,10 +29,88 @@ class MainNavigationShell extends StatefulWidget {
 class _MainNavigationShellState extends State<MainNavigationShell> {
   int _currentIndex = 0;
 
+  final AppLinks _appLinks = AppLinks();
+  StreamSubscription<Uri>? _linkSubscription;
+  bool _handlingIncomingLink = false;
+
   @override
   void initState() {
     super.initState();
     _listenToShareIntents();
+    _initDeepLinks();
+  }
+
+  Future<void> _initDeepLinks() async {
+    final initialUri = await _appLinks.getInitialLink();
+
+    if (initialUri != null && mounted) {
+      await _handleIncomingLink(initialUri);
+    }
+
+    _linkSubscription = _appLinks.uriLinkStream.listen(
+      (uri) => _handleIncomingLink(uri),
+      onError: (error) {
+        debugPrint('Incoming link error: $error');
+      },
+    );
+  }
+
+  bool _isYouTubeUrl(Uri uri) {
+    const hosts = {
+      'youtube.com',
+      'www.youtube.com',
+      'm.youtube.com',
+      'music.youtube.com',
+      'youtu.be',
+    };
+
+    return (uri.scheme == 'https' || uri.scheme == 'http') &&
+        hosts.contains(uri.host.toLowerCase());
+  }
+
+  Future<void> _handleIncomingLink(Uri uri) async {
+    if (!_isYouTubeUrl(uri) || _handlingIncomingLink) return;
+
+    _handlingIncomingLink = true;
+
+    final overlay = OverlayEntry(
+      builder: (context) => VideoLoadingOverlay(
+        thumbnail: null,
+        title: 'Loading ${uri.toString()}',
+      ),
+    );
+
+    Overlay.of(context).insert(overlay);
+    bool overlayRemoved = false;
+
+    void removeOverlay() {
+      if (!overlayRemoved) {
+        overlayRemoved = true;
+        overlay.remove();
+      }
+    }
+
+    try {
+      final info = await VideoExtractorService.instance.extractInfo(
+        uri.toString(),
+      );
+
+      if (!mounted) {
+        removeOverlay();
+        return;
+      }
+
+      removeOverlay();
+
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => StreamVideoPage(info: info)),
+      );
+    } catch (error) {
+      debugPrint('Failed to open YouTube link: $error');
+    } finally {
+      _handlingIncomingLink = false;
+      removeOverlay();
+    }
   }
 
   void _listenToShareIntents() {
@@ -35,17 +118,68 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
       final sharedUrl = ShareIntentService.instance.sharedUrlNotifier.value;
       if (sharedUrl != null && mounted) {
         _openAddVideoModal(initialUrl: sharedUrl);
+
         ShareIntentService.instance.clearSharedUrl();
       }
     });
   }
 
-  void _openAddVideoModal({String? initialUrl}) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => AddVideoModal(initialUrl: initialUrl),
+  void _openAddVideoModal({String? initialUrl}) async {
+    final overlay = OverlayEntry(
+      builder: (context) =>
+          VideoLoadingOverlay(thumbnail: null, title: 'Loading $initialUrl'),
     );
+
+    Overlay.of(context).insert(overlay);
+    bool overlayRemoved = false;
+
+    void removeOverlay() {
+      if (!overlayRemoved) {
+        overlayRemoved = true;
+        overlay.remove();
+      }
+    }
+
+    try {
+      final info = await VideoExtractorService.instance.extractInfo(
+        '$initialUrl',
+      );
+
+      if (!context.mounted) {
+        removeOverlay();
+        return;
+      }
+
+      removeOverlay();
+      await Navigator.push(
+        context,
+        PageRouteBuilder(
+          opaque: false,
+          barrierColor: Colors.transparent,
+          transitionDuration: Duration.zero,
+          maintainState: true,
+          pageBuilder: (context, animation, secondaryAnimation) {
+            return StreamVideoPage(info: info);
+          },
+          reverseTransitionDuration: const Duration(milliseconds: 180),
+        ),
+      );
+    } catch (e, stackTrace) {
+      removeOverlay();
+      debugPrint('Failed to open stream page 1: $e');
+      debugPrintStack(stackTrace: stackTrace);
+
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not load this video')),
+      );
+    }
+    // showModalBottomSheet(
+    //   context: context,
+    //   isScrollControlled: true,
+    //   builder: (ctx) => AddVideoModal(initialUrl: initialUrl),
+    // );
   }
 
   void _openFullscreenPlayer() {
@@ -67,6 +201,12 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
   }
 
   final FocusNode _searchFocusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -208,7 +348,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
               child: MiniPlayerWidget(onExpand: _openFullscreenPlayer),
             ),
 
-            // MiniPlayer(),
+            MiniPlayer(),
           ],
         ),
 
