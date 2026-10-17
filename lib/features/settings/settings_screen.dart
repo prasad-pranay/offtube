@@ -178,22 +178,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     DatabaseService.instance.setSetting('autoplay_next', val);
                   },
                 ),
-                const Divider(height: 1),
-                SwitchListTile(
-                  title: const Text('Remember Playback Position'),
-                  subtitle: const Text(
-                    'Resume watched videos from where you left off',
-                  ),
-                  activeThumbColor: AppTheme.accentColor,
-                  value: _rememberPosition,
-                  onChanged: (val) {
-                    setState(() => _rememberPosition = val);
-                    DatabaseService.instance.setSetting(
-                      'remember_position',
-                      val,
-                    );
-                  },
-                ),
+                // const Divider(height: 1),
+                // SwitchListTile(
+                //   title: const Text('Remember Playback Position'),
+                //   subtitle: const Text(
+                //     'Resume watched videos from where you left off',
+                //   ),
+                //   activeThumbColor: AppTheme.accentColor,
+                //   value: _rememberPosition,
+                //   onChanged: (val) {
+                //     setState(() => _rememberPosition = val);
+                //     DatabaseService.instance.setSetting(
+                //       'remember_position',
+                //       val,
+                //     );
+                //   },
+                // ),
               ],
             ),
           ),
@@ -328,20 +328,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 const ListTile(
                   title: Text('OfflineTube'),
-                  subtitle: Text(
-                    'Version 1.0.0 • Pure offline playback & downloader',
-                  ),
+                  subtitle: Text('Version 4.9 • By Pranay'),
                   leading: Icon(
                     Icons.offline_bolt_rounded,
                     color: AppTheme.accentColor,
                   ),
                 ),
-                const Divider(height: 1),
-                ListTile(
-                  title: const Text('Open Source Licenses'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => showLicensePage(context: context),
-                ),
+                // const Divider(height: 1),
+                // ListTile(
+                //   title: const Text('Open Source Licenses'),
+                //   trailing: const Icon(Icons.chevron_right_rounded),
+                //   onTap: () => showLicensePage(context: context),
+                // ),
               ],
             ),
           ),

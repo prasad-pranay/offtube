@@ -35,6 +35,11 @@ class PlaybackCoordinator extends ChangeNotifier with WidgetsBindingObserver {
 
   int _currentIndex = -1;
 
+  int _onlineNextPlaylistIndex = -1;
+  final List<ExtractedVideoInfo> _onlineNextPlayList = [];
+  List<ExtractedVideoInfo> get onlineNextPlayList => _onlineNextPlayList;
+  int get onlineNextPlaylistIndex => _onlineNextPlaylistIndex;
+
   bool _isShuffle = false;
   RepeatMode _repeatMode = RepeatMode.off;
   double _playbackSpeed = 1.0;
@@ -149,6 +154,16 @@ class PlaybackCoordinator extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  Future<void> addNextOnlinePlayVideoList(String id) async {
+    final ExtractedVideoInfo newVideo = await VideoExtractorService.instance
+        .extractInfo('https://www.youtube.com/watch?v=${id}');
+
+    _onlineNextPlayList.add(newVideo);
+  }
+
+  Future<void> removeNextOnlinePlayVideoList(int index) async {
+    _onlineNextPlayList.removeAt(index);
+  }
   // ---------------------------------------------------------------------------
   // Initialization
   // ---------------------------------------------------------------------------
@@ -776,7 +791,11 @@ class PlaybackCoordinator extends ChangeNotifier with WidgetsBindingObserver {
       _stopPositionTicker();
       unawaited(_videoController?.pause() ?? Future<void>.value());
       notifyListeners();
-      print("video end hogya");
+      if (_onlineNextPlayList.isNotEmpty &&
+          _onlineNextPlayList.length != _onlineNextPlaylistIndex + 1) {
+        _onlineNextPlaylistIndex = _onlineNextPlaylistIndex + 1;
+        ensureOnlineVideo(_onlineNextPlayList[_onlineNextPlaylistIndex]);
+      }
       return;
     }
 

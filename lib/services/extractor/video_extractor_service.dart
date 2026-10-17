@@ -123,7 +123,6 @@ class VideoExtractorService {
             ),
           );
         }
-        print("second wala ${videos.length}");
         return videos;
       } else {
         return videos;
@@ -132,6 +131,7 @@ class VideoExtractorService {
       debugPrint('Video search failed: $e');
       debugPrintStack(stackTrace: stackTrace);
       try {
+        final videos = [];
         const apiKey = 'AIzaSyCU-DpbLdYo1mgs9Jg7BBbFdk0AE_0q0dI';
 
         final uri = Uri.https('www.googleapis.com', '/youtube/v3/search', {
@@ -151,12 +151,29 @@ class VideoExtractorService {
         }
 
         final data = jsonDecode(response.body);
-        print("dynamic data ${data}");
-        // for (final i in data) {
-        //   print('${i}');
-        // }
-        return [];
+
+        for (final video in data['items']) {
+          videos.add(
+            ExtractedVideoInfo(
+              type: "video",
+              channelId: video["snippet"]["channel123"],
+              uploadDate: video["snippet"]["publishedAt"],
+              viewCount: 0,
+              isLive: video['snippet']['liveBroadcastContent'] == 'live',
+              id: video["id"]["videoId"],
+              url: 'https://www.youtube.com/watch?v=${video['id']['videoId']}',
+              title: video["snippet"]["title"],
+              description: video["snippet"]["description"],
+              author: video["snippet"]["channelTitle"],
+              thumbnailUrl: video["snippet"]["thumbnails"]["high"]["url"],
+              durationSeconds: 0,
+              formats: const [],
+            ),
+          );
+        }
+        return videos;
       } catch (error) {
+        debugPrint("Internet not avalable: No search");
         // ScaffoldMessenger.of(context).showSnackBar(
         //   const SnackBar(
         //     content: Row(
@@ -342,7 +359,7 @@ class VideoExtractorService {
         thumbnailUrl: video.thumbnails.highResUrl.isNotEmpty
             ? video.thumbnails.highResUrl
             : video.thumbnails.standardResUrl,
-        durationSeconds: video.duration!.inMinutes,
+        durationSeconds: video.duration!.inSeconds,
         formats: formats,
       );
     } catch (ytError) {
@@ -405,7 +422,6 @@ class VideoExtractorService {
       } catch (ytdlpErr) {
         debugPrint('ytdlp_flutter exception: $ytdlpErr');
       }
-      print("recieved file link : ${rawUrl} ${url}");
       throw Exception(
         'Could not extract media info. Please verify the link is valid and public.',
       );

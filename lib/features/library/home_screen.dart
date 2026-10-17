@@ -268,6 +268,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: theme.textTheme.bodySmall?.color,
                     ),
                   ),
+                  TextButton(
+                    onPressed: () => setState(() {
+                      _searchQuery = "";
+                    }),
+                    child: Text("Clear"),
+                  ),
                 ],
               ),
             );

@@ -45,6 +45,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
   late final List<Widget> _screens;
   final FocusNode _searchFocusNode = FocusNode();
   bool _isVideoFullscreen = false;
+
   @override
   void initState() {
     super.initState();
@@ -394,16 +395,27 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           return;
         }
 
-        // If not on Home, go Home
+        // If channel page then go to saerch page back
         if (_channelId != null) {
           setState(() {
             _channelId = null;
           });
           return;
         }
+
+        // if on search screen then display the back results
+        if (_currentIndex == 3) {
+          if (_searchPageKey.currentState != null &&
+              _searchPageKey.currentState!.resultsHistory.isNotEmpty) {
+            _searchPageKey.currentState!.goBackInHistory();
+            return;
+          }
+        }
+
         if (_activeStream != null) {
           return;
         }
+        // if not on home page then go to home page
         if (_currentIndex != 0) {
           setState(() {
             _currentIndex = 0;
@@ -451,7 +463,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           ],
         ),
 
-        bottomNavigationBar: _isVideoFullscreen
+        bottomNavigationBar: _isVideoFullscreen || _activeStream != null
             ? null
             : BottomAppBar(
                 color:

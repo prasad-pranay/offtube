@@ -38,6 +38,34 @@ class VideoCard extends StatelessWidget {
     );
   }
 
+  Widget _menuItem({
+    required IconData icon,
+    required String label,
+    required ThemeData theme,
+    bool isDestructive = false,
+  }) {
+    final color = isDestructive
+        ? theme.colorScheme.error
+        : theme.colorScheme.onSurfaceVariant;
+
+    return Row(
+      children: [
+        Icon(icon, size: 19, color: color),
+        const SizedBox(width: 12),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w300,
+            color: isDestructive
+                ? theme.colorScheme.error
+                : theme.colorScheme.onSurface,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -121,7 +149,7 @@ class VideoCard extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w400,
                           fontSize: 16,
                           height: 1.25,
                         ),
@@ -131,12 +159,6 @@ class VideoCard extends StatelessWidget {
                         children: [
                           if (video.author != null &&
                               video.author!.isNotEmpty) ...[
-                            Icon(
-                              CupertinoIcons.play_circle,
-                              size: 13,
-                              color: theme.colorScheme.tertiary,
-                            ),
-                            SizedBox(width: 5),
                             Flexible(
                               child: Text(
                                 video.author!,
@@ -145,17 +167,15 @@ class VideoCard extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: theme.colorScheme.tertiary,
+                                  fontWeight: FontWeight.w400,
                                 ),
                               ),
                             ),
-                            SizedBox(width: 20),
                           ],
-                          Icon(
-                            CupertinoIcons.calendar,
-                            size: 13,
-                            color: theme.colorScheme.tertiary,
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 10),
+                            child: Text("•"),
                           ),
-                          SizedBox(width: 5),
                           Text(
                             video.formattedDownloadDate,
                             style: TextStyle(
@@ -163,13 +183,10 @@ class VideoCard extends StatelessWidget {
                               color: theme.colorScheme.tertiary,
                             ),
                           ),
-                          SizedBox(width: 20),
-                          Icon(
-                            Icons.hardware_outlined,
-                            size: 13,
-                            color: theme.colorScheme.tertiary,
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 10),
+                            child: Text("•"),
                           ),
-                          SizedBox(width: 5),
                           Text(
                             video.formattedFileSize,
                             style: TextStyle(
@@ -185,18 +202,19 @@ class VideoCard extends StatelessWidget {
                 // Three dot menu
                 PopupMenuButton<String>(
                   padding: EdgeInsets.zero,
+                  iconSize: 22,
+                  tooltip: 'More options',
                   icon: Icon(
-                    Icons.more_horiz_rounded,
-                    size: 26,
-                    color: theme.textTheme.bodySmall?.color,
+                    CupertinoIcons.ellipsis,
+                    size: 21,
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
-                  color: theme.cardTheme.color,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(
-                      color: theme.colorScheme.outline.withAlpha(50),
-                      width: 0.8,
-                    ),
+                  color: theme.colorScheme.surface,
+                  elevation: 8,
+                  surfaceTintColor: const Color.fromARGB(255, 72, 72, 72),
+                  constraints: const BoxConstraints(
+                    minWidth: 190,
+                    maxWidth: 220,
                   ),
                   onSelected: (value) {
                     switch (value) {
@@ -215,56 +233,129 @@ class VideoCard extends StatelessWidget {
                     }
                   },
                   itemBuilder: (context) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'play',
-                      child: Row(
-                        children: [
-                          Icon(Icons.play_arrow_rounded, size: 20),
-                          SizedBox(width: 10),
-                          Text('Play'),
-                        ],
+                      height: 44,
+                      child: _menuItem(
+                        icon: CupertinoIcons.play,
+                        label: 'Play',
+                        theme: theme,
                       ),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'info',
-                      child: Row(
-                        children: [
-                          Icon(Icons.info_outline_rounded, size: 20),
-                          SizedBox(width: 10),
-                          Text('Video details'),
-                        ],
+                      height: 44,
+                      child: _menuItem(
+                        icon: CupertinoIcons.info,
+                        label: 'Video details',
+                        theme: theme,
                       ),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'share',
-                      child: Row(
-                        children: [
-                          Icon(Icons.share_rounded, size: 20),
-                          SizedBox(width: 10),
-                          Text('Share Video'),
-                        ],
+                      height: 44,
+                      child: _menuItem(
+                        icon: CupertinoIcons.arrowshape_turn_up_left,
+                        label: 'Share video',
+                        theme: theme,
                       ),
                     ),
-                    const PopupMenuDivider(),
-                    const PopupMenuItem(
+                    const PopupMenuDivider(height: 8),
+                    PopupMenuItem(
                       value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.delete_outline_rounded,
-                            size: 20,
-                            color: Colors.redAccent,
-                          ),
-                          SizedBox(width: 10),
-                          Text(
-                            'Delete',
-                            style: TextStyle(color: Colors.redAccent),
-                          ),
-                        ],
+                      height: 44,
+                      child: _menuItem(
+                        icon: CupertinoIcons.trash,
+                        label: 'Delete',
+                        theme: theme,
+                        isDestructive: true,
                       ),
                     ),
                   ],
                 ),
+
+                // PopupMenuButton<String>(
+                //   padding: EdgeInsets.zero,
+                //   icon: Icon(
+                //     CupertinoIcons.ellipsis,
+                //     size: 22,
+                //     color: theme.textTheme.bodySmall?.color,
+                //   ),
+                //   color: theme.cardTheme.color,
+                //   shape: RoundedRectangleBorder(
+                //     borderRadius: BorderRadius.circular(16),
+                //     side: BorderSide(
+                //       color: theme.colorScheme.outline.withAlpha(50),
+                //       width: 0.8,
+                //     ),
+                //   ),
+                //   onSelected: (value) {
+                //     switch (value) {
+                //       case 'play':
+                //         onPlay();
+                //         break;
+                //       case 'info':
+                //         onInfo();
+                //         break;
+                //       case 'share':
+                //         shareVideo(path, video.id);
+                //         break;
+                //       case 'delete':
+                //         onDelete();
+                //         break;
+                //     }
+                //   },
+                //   itemBuilder: (context) => [
+                //     const PopupMenuItem(
+                //       value: 'play',
+                //       child: Row(
+                //         children: [
+                //           Icon(Icons.play_arrow_rounded, size: 20),
+                //           SizedBox(width: 10),
+                //           Text('Play'),
+                //         ],
+                //       ),
+                //     ),
+                //     const PopupMenuItem(
+                //       value: 'info',
+                //       child: Row(
+                //         children: [
+                //           Icon(Icons.info_outline_rounded, size: 20),
+                //           SizedBox(width: 10),
+                //           Text('Video details'),
+                //         ],
+                //       ),
+                //     ),
+                //     const PopupMenuItem(
+                //       value: 'share',
+                //       child: Row(
+                //         children: [
+                //           Icon(Icons.share_rounded, size: 20),
+                //           SizedBox(width: 10),
+                //           Text('Share Video'),
+                //         ],
+                //       ),
+                //     ),
+                //     const PopupMenuDivider(),
+                //     const PopupMenuItem(
+                //       value: 'delete',
+                //       child: Row(
+                //         children: [
+                //           Icon(
+                //             Icons.delete_outline_rounded,
+                //             size: 20,
+                //             color: Colors.redAccent,
+                //           ),
+                //           SizedBox(width: 10),
+                //           Text(
+                //             'Delete',
+                //             style: TextStyle(color: Colors.redAccent),
+                //           ),
+                //         ],
+                //       ),
+                //     ),
+                //   ],
+                // ),
               ],
             ),
           ),

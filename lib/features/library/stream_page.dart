@@ -480,7 +480,7 @@ class StreamVideoPageState extends State<StreamVideoPage>
       await showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.black87,
         builder: (_) => QualitySelectionSheet(info: info),
       );
     } catch (error) {
@@ -510,7 +510,7 @@ class StreamVideoPageState extends State<StreamVideoPage>
   // ---------------------------------------------------------------------------
   // Video and controls
   // ---------------------------------------------------------------------------
-
+  Offset? _doubleTapPosition;
   Widget _buildVideoSurface() {
     final controller = _controller;
 
@@ -562,13 +562,38 @@ class StreamVideoPageState extends State<StreamVideoPage>
 
     return ColoredBox(
       color: Colors.black,
-      child: SizedBox.expand(
-        child: FittedBox(
-          fit: BoxFit.contain,
-          child: SizedBox(
-            width: videoSize.width,
-            height: videoSize.height,
-            child: VideoPlayer(controller),
+      child: GestureDetector(
+        onDoubleTapDown: (details) {
+          setState(() {
+            _doubleTapPosition = details.localPosition;
+          });
+        },
+        onDoubleTap: () {
+          if (_doubleTapPosition == null) return;
+
+          final width = MediaQuery.sizeOf(context).width;
+
+          if (_doubleTapPosition!.dx < width / 2) {
+            _coordinator.seekBackward();
+            debugPrint('Double-tapped left side');
+          } else {
+            _coordinator.seekForward();
+            debugPrint('Double-tapped right side');
+          }
+          Future.delayed(Duration(milliseconds: 500), () {
+            setState(() {
+              _doubleTapPosition = null;
+            });
+          });
+        },
+        child: SizedBox.expand(
+          child: FittedBox(
+            fit: BoxFit.contain,
+            child: SizedBox(
+              width: videoSize.width,
+              height: videoSize.height,
+              child: VideoPlayer(controller),
+            ),
           ),
         ),
       ),
@@ -620,7 +645,6 @@ class StreamVideoPageState extends State<StreamVideoPage>
 
   //   return RepaintBoundary(child: VideoPlayer(controller));
   // }
-
   Widget _buildControls() {
     final controller = _controller;
 
@@ -716,7 +740,7 @@ class StreamVideoPageState extends State<StreamVideoPage>
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: _isFullscreen ? 18 : 14,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w400,
                               ),
                             ),
                           ),
@@ -933,6 +957,19 @@ class StreamVideoPageState extends State<StreamVideoPage>
     return '${duration.inMinutes}:${two(duration.inSeconds.remainder(60))}';
   }
 
+  String _formatDurationAnother(int seconds) {
+    final duration = Duration(seconds: seconds);
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    final secs = duration.inSeconds.remainder(60);
+
+    if (hours > 0) {
+      return '$hours:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+    }
+
+    return '${duration.inMinutes}:${secs.toString().padLeft(2, '0')}';
+  }
+
   // ---------------------------------------------------------------------------
   // Information and recommendations
   // ---------------------------------------------------------------------------
@@ -991,7 +1028,7 @@ class StreamVideoPageState extends State<StreamVideoPage>
                 'Recommended',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 12,
+                  fontSize: 16,
                   fontWeight: FontWeight.w300,
                 ),
               ),
@@ -1026,20 +1063,50 @@ class StreamVideoPageState extends State<StreamVideoPage>
                           child: SizedBox(
                             width: 148,
                             height: 84,
-                            child: Image.network(
-                              video.thumbnailUrl ?? '',
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) {
-                                return const ColoredBox(
-                                  color: Color(0xFF252525),
-                                  child: Center(
-                                    child: Icon(
-                                      Icons.play_circle_outline,
-                                      color: Colors.white60,
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.network(
+                                  video.thumbnailUrl ?? '',
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) {
+                                    return const ColoredBox(
+                                      color: Color(0xFF252525),
+                                      child: Center(
+                                        child: Icon(
+                                          Icons.play_circle_outline,
+                                          color: Colors.white60,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                Positioned(
+                                  right: 5,
+                                  bottom: 5,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 5,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black87,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      _formatDurationAnother(
+                                        video.durationSeconds,
+                                      ),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        height: 1.2,
+                                      ),
                                     ),
                                   ),
-                                );
-                              },
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -1056,7 +1123,7 @@ class StreamVideoPageState extends State<StreamVideoPage>
                                   color: Colors.white,
                                   fontSize: 14,
                                   height: 1.35,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w400,
                                 ),
                               ),
                               const SizedBox(height: 7),
@@ -1067,7 +1134,8 @@ class StreamVideoPageState extends State<StreamVideoPage>
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
-                                      color: Colors.white60,
+                                      color: Colors.white70,
+                                      fontWeight: FontWeight.w300,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -1082,8 +1150,9 @@ class StreamVideoPageState extends State<StreamVideoPage>
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
-                                      color: Colors.white60,
+                                      color: Colors.white70,
                                       fontSize: 12,
+                                      fontWeight: FontWeight.w300,
                                     ),
                                   ),
                                 ],
@@ -1181,7 +1250,7 @@ class StreamVideoPageState extends State<StreamVideoPage>
                       color: Colors.white,
                       fontSize: 18,
                       height: 1.35,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
                   if (widget.info.description?.isNotEmpty == true) ...[
@@ -1198,9 +1267,12 @@ class StreamVideoPageState extends State<StreamVideoPage>
                         overflow: _descriptionOpen
                             ? TextOverflow.visible
                             : TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white70,
+                        style: TextStyle(
+                          color: _descriptionOpen
+                              ? Colors.white
+                              : Colors.white70,
                           fontSize: 13,
+                          fontWeight: FontWeight.w300,
                           height: 1.5,
                         ),
                       ),
@@ -1225,7 +1297,7 @@ class StreamVideoPageState extends State<StreamVideoPage>
                       Spacer(),
                       const SizedBox(width: 10),
                       _buildActionButton(
-                        icon: CupertinoIcons.cloud_download,
+                        icon: CupertinoIcons.arrow_down,
                         label: null,
                         onTap: _download,
                       ),
@@ -1250,7 +1322,7 @@ class StreamVideoPageState extends State<StreamVideoPage>
   // ---------------------------------------------------------------------------
   // Page layout
   // ---------------------------------------------------------------------------
-
+  bool nextPlayVideoExpand = false;
   @override
   Widget build(BuildContext context) {
     final screen = MediaQuery.sizeOf(context);
@@ -1372,82 +1444,542 @@ class StreamVideoPageState extends State<StreamVideoPage>
                             progress,
                           )!;
 
-                    return Positioned(
-                      left: fullscreen ? 0 : left,
-                      top: fullscreen ? 0 : top,
-                      width: fullscreen ? screen.width : width,
-                      height: fullscreen ? screen.height : height,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onVerticalDragStart: fullscreen ? null : _onDragStart,
-                        onVerticalDragUpdate: fullscreen
-                            ? null
-                            : (details) => _onDragUpdate(details, travel),
-                        onVerticalDragEnd: fullscreen
-                            ? null
-                            : (details) => _onDragEnd(details, travel),
-                        onTap: mini ? _expandPlayer : _toggleControls,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(
-                            fullscreen ? 0 : 12 * progress,
-                          ),
-                          child: ColoredBox(
-                            color: Colors.black,
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                _buildVideoSurface(),
+                    return Stack(
+                      children: [
+                        Positioned(
+                          left: fullscreen ? 0 : left,
+                          top: fullscreen ? 0 : top,
+                          width: fullscreen ? screen.width : width,
+                          height: fullscreen ? screen.height : height,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onVerticalDragStart: fullscreen
+                                ? null
+                                : _onDragStart,
+                            onVerticalDragUpdate: fullscreen
+                                ? null
+                                : (details) => _onDragUpdate(details, travel),
+                            onVerticalDragEnd: fullscreen
+                                ? null
+                                : (details) => _onDragEnd(details, travel),
+                            onTap: mini ? _expandPlayer : _toggleControls,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(
+                                fullscreen ? 0 : 12 * progress,
+                              ),
+                              child: ColoredBox(
+                                color: Colors.black,
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    _buildVideoSurface(),
 
-                                if (!mini) _buildControls(),
-
-                                if (mini)
-                                  Positioned(
-                                    top: 4,
-                                    right: 4,
-                                    child: Material(
-                                      color: Colors.black54,
-                                      shape: const CircleBorder(),
-                                      child: InkWell(
-                                        customBorder: const CircleBorder(),
-                                        onTap: _closePlayer,
-                                        child: const Padding(
-                                          padding: EdgeInsets.all(5),
-                                          child: Icon(
-                                            Icons.close_rounded,
-                                            color: Colors.white,
-                                            size: 18,
+                                    Positioned(
+                                      top: fullscreen
+                                          ? screen.height / 2 - 10
+                                          : height / 2 - 10,
+                                      left:
+                                          _doubleTapPosition != null &&
+                                              _doubleTapPosition!.dx <
+                                                  screen.width / 2
+                                          ? screen.width / 5
+                                          : null,
+                                      right:
+                                          _doubleTapPosition != null &&
+                                              _doubleTapPosition!.dx >
+                                                  screen.width / 2
+                                          ? screen.width / 5
+                                          : null,
+                                      child: IgnorePointer(
+                                        child: Opacity(
+                                          opacity: _doubleTapPosition == null
+                                              ? 0
+                                              : 1,
+                                          // duration: Duration(milliseconds: 500),
+                                          child: Text(
+                                            _doubleTapPosition != null &&
+                                                    _doubleTapPosition!.dx <
+                                                        screen.width / 2
+                                                ? '-10s'
+                                                : '+10s',
+                                            style: TextStyle(
+                                              fontSize: 30,
+                                              fontWeight: FontWeight.w300,
+                                            ),
                                           ),
                                         ),
                                       ),
                                     ),
-                                  ),
 
-                                if (mini)
-                                  Positioned(
-                                    bottom: 5,
-                                    left: 8,
-                                    right: 8,
-                                    child: Text(
-                                      widget.info.title,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                        shadows: [
-                                          Shadow(
-                                            color: Colors.black,
-                                            blurRadius: 5,
+                                    if (!mini) _buildControls(),
+
+                                    if (mini)
+                                      Positioned(
+                                        top: 4,
+                                        right: 4,
+                                        child: Material(
+                                          color: Colors.black54,
+                                          shape: const CircleBorder(),
+                                          child: InkWell(
+                                            customBorder: const CircleBorder(),
+                                            onTap: _closePlayer,
+                                            child: const Padding(
+                                              padding: EdgeInsets.all(5),
+                                              child: Icon(
+                                                Icons.close_rounded,
+                                                color: Colors.white,
+                                                size: 18,
+                                              ),
+                                            ),
                                           ),
-                                        ],
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                              ],
+
+                                    if (mini)
+                                      Positioned(
+                                        bottom: 5,
+                                        left: 8,
+                                        right: 8,
+                                        child: Text(
+                                          widget.info.title,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            shadows: [
+                                              Shadow(
+                                                color: Colors.black,
+                                                blurRadius: 5,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                        if (!fullscreen &&
+                            drag < 1 &&
+                            PlaybackCoordinator
+                                .instance
+                                .onlineNextPlayList
+                                .isNotEmpty)
+                          AnimatedPositioned(
+                            duration: Duration(milliseconds: 300),
+                            left: 0,
+                            right: 0,
+                            bottom: nextPlayVideoExpand ? 0 : 40,
+                            child: AnimatedContainer(
+                              margin: EdgeInsets.symmetric(horizontal: 5),
+                              duration: const Duration(milliseconds: 280),
+                              curve: Curves.easeInOutCubic,
+                              height: nextPlayVideoExpand
+                                  ? screen.height - height - 60
+                                  : 66,
+                              decoration: BoxDecoration(
+                                color: nextPlayVideoExpand
+                                    ? Colors.black
+                                    : Colors.black87,
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(18),
+                                  bottom: Radius.circular(12),
+                                ),
+                                border: Border.all(color: Colors.white12),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black38,
+                                    blurRadius: 16,
+                                    offset: Offset(0, -4),
+                                  ),
+                                ],
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: Column(
+                                  children: [
+                                    // Collapsed header (also stays at top when expanded)
+                                    GestureDetector(
+                                      onVerticalDragEnd: (details) {
+                                        if (details.primaryVelocity != null &&
+                                            details.primaryVelocity! > 0) {
+                                          setState(() {
+                                            nextPlayVideoExpand = false;
+                                          });
+                                        } else {
+                                          setState(() {
+                                            nextPlayVideoExpand = true;
+                                          });
+                                        }
+                                      },
+                                      onTap: () {
+                                        setState(() {
+                                          nextPlayVideoExpand =
+                                              !nextPlayVideoExpand;
+                                        });
+                                      },
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.transparent,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                        ),
+                                        height: 64,
+                                        child: Row(
+                                          children: nextPlayVideoExpand
+                                              ? [
+                                                  Column(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        "My Mix",
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 16,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                      const Text(
+                                                        'These videos are your next playable.',
+                                                        style: TextStyle(
+                                                          color: Colors.white70,
+                                                          fontSize: 11,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  Spacer(),
+                                                  Spacer(),
+                                                  Icon(
+                                                    nextPlayVideoExpand
+                                                        ? CupertinoIcons.xmark
+                                                        : CupertinoIcons
+                                                              .chevron_up,
+                                                    color: Colors.white,
+                                                    size: 22,
+                                                  ),
+                                                ]
+                                              : [
+                                                  const Icon(
+                                                    CupertinoIcons
+                                                        .antenna_radiowaves_left_right,
+                                                    color: Colors.white,
+                                                    size: 30,
+                                                  ),
+                                                  const SizedBox(width: 12),
+
+                                                  SizedBox(
+                                                    width: screen.width - 110,
+                                                    child: Column(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .center,
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Text(
+                                                          PlaybackCoordinator
+                                                                  .instance
+                                                                  .onlineNextPlayList
+                                                                  .isNotEmpty
+                                                              ? 'Next : ${PlaybackCoordinator.instance.onlineNextPlayList.first.title}'
+                                                              : 'Queue is empty',
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          style:
+                                                              const TextStyle(
+                                                                color: Colors
+                                                                    .white,
+                                                                fontSize: 13,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w500,
+                                                              ),
+                                                        ),
+                                                        const Text(
+                                                          'My mix',
+                                                          style: TextStyle(
+                                                            color:
+                                                                Colors.white70,
+                                                            fontSize: 11,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  Spacer(),
+                                                  Icon(
+                                                    nextPlayVideoExpand
+                                                        ? CupertinoIcons
+                                                              .chevron_down
+                                                        : CupertinoIcons
+                                                              .chevron_up,
+                                                    color: Colors.white,
+                                                    size: 22,
+                                                  ),
+                                                ],
+                                        ),
+                                      ),
+                                    ),
+
+                                    // Expanded queue
+                                    if (nextPlayVideoExpand)
+                                      Expanded(
+                                        child:
+                                            PlaybackCoordinator
+                                                .instance
+                                                .onlineNextPlayList
+                                                .isEmpty
+                                            ? const Center(
+                                                child: Text(
+                                                  'No videos in queue',
+                                                  style: TextStyle(
+                                                    color: Colors.white54,
+                                                  ),
+                                                ),
+                                              )
+                                            : ListView.builder(
+                                                padding: const EdgeInsets.only(
+                                                  bottom: 8,
+                                                ),
+                                                itemCount: PlaybackCoordinator
+                                                    .instance
+                                                    .onlineNextPlayList
+                                                    .length,
+                                                itemBuilder: (context, index) {
+                                                  final video = PlaybackCoordinator
+                                                      .instance
+                                                      .onlineNextPlayList[index];
+
+                                                  return Padding(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 12,
+                                                          vertical: 6,
+                                                        ),
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(
+                                                          CupertinoIcons
+                                                              .line_horizontal_3,
+                                                        ),
+                                                        SizedBox(width: 10),
+                                                        SizedBox(
+                                                          width: 112,
+                                                          height: 63,
+                                                          child: ClipRRect(
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  8,
+                                                                ),
+                                                            child: Stack(
+                                                              fit: StackFit
+                                                                  .expand,
+                                                              children: [
+                                                                // Thumbnail
+                                                                if (video.thumbnailUrl !=
+                                                                        null &&
+                                                                    video
+                                                                        .thumbnailUrl!
+                                                                        .isNotEmpty)
+                                                                  Image.network(
+                                                                    video
+                                                                        .thumbnailUrl!,
+                                                                    fit: BoxFit
+                                                                        .cover,
+                                                                    errorBuilder: (_, __, ___) => const ColoredBox(
+                                                                      color: Color(
+                                                                        0xFF303030,
+                                                                      ),
+                                                                      child: Icon(
+                                                                        Icons
+                                                                            .play_circle_outline_rounded,
+                                                                        color: Colors
+                                                                            .white54,
+                                                                        size:
+                                                                            28,
+                                                                      ),
+                                                                    ),
+                                                                  )
+                                                                else
+                                                                  const ColoredBox(
+                                                                    color: Color(
+                                                                      0xFF303030,
+                                                                    ),
+                                                                    child: Icon(
+                                                                      Icons
+                                                                          .play_circle_outline_rounded,
+                                                                      color: Colors
+                                                                          .white54,
+                                                                      size: 28,
+                                                                    ),
+                                                                  ),
+
+                                                                // Subtle bottom gradient for contrast
+                                                                Positioned(
+                                                                  left: 0,
+                                                                  right: 0,
+                                                                  bottom: 0,
+                                                                  height: 28,
+                                                                  child: DecoratedBox(
+                                                                    decoration: BoxDecoration(
+                                                                      gradient: LinearGradient(
+                                                                        begin: Alignment
+                                                                            .topCenter,
+                                                                        end: Alignment
+                                                                            .bottomCenter,
+                                                                        colors: [
+                                                                          Colors
+                                                                              .transparent,
+                                                                          Colors.black.withValues(
+                                                                            alpha:
+                                                                                0.65,
+                                                                          ),
+                                                                        ],
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+
+                                                                // Duration badge
+                                                                Positioned(
+                                                                  right: 5,
+                                                                  bottom: 5,
+                                                                  child: Container(
+                                                                    padding: const EdgeInsets.symmetric(
+                                                                      horizontal:
+                                                                          5,
+                                                                      vertical:
+                                                                          2,
+                                                                    ),
+                                                                    decoration: BoxDecoration(
+                                                                      color: Colors
+                                                                          .black87,
+                                                                      borderRadius:
+                                                                          BorderRadius.circular(
+                                                                            4,
+                                                                          ),
+                                                                    ),
+                                                                    child: Text(
+                                                                      _formatDurationAnother(
+                                                                        video
+                                                                            .durationSeconds,
+                                                                      ),
+                                                                      style: const TextStyle(
+                                                                        color: Colors
+                                                                            .white,
+                                                                        fontSize:
+                                                                            10,
+                                                                        fontWeight:
+                                                                            FontWeight.w600,
+                                                                        height:
+                                                                            1.2,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 12,
+                                                        ),
+
+                                                        Expanded(
+                                                          child: Column(
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .start,
+                                                            children: [
+                                                              Text(
+                                                                video.title,
+                                                                maxLines: 2,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                                style: const TextStyle(
+                                                                  color: Colors
+                                                                      .white,
+                                                                  fontSize: 13,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
+                                                                ),
+                                                              ),
+                                                              const SizedBox(
+                                                                height: 5,
+                                                              ),
+                                                              Text(
+                                                                video.author ??
+                                                                    'Unknown channel',
+                                                                maxLines: 1,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                                style: const TextStyle(
+                                                                  color: Colors
+                                                                      .white60,
+                                                                  fontSize: 12,
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+
+                                                        IconButton(
+                                                          tooltip:
+                                                              'Remove from queue',
+                                                          onPressed: () {
+                                                            setState(() {
+                                                              // PlaybackCoordinator
+                                                              //     .instance
+                                                              //     .onlineNextPlayList
+                                                              //     .removeAt(
+                                                              //       index,
+                                                              //     );
+                                                              PlaybackCoordinator
+                                                                  .instance
+                                                                  .removeNextOnlinePlayVideoList(
+                                                                    index,
+                                                                  );
+                                                            });
+                                                          },
+                                                          icon: const Icon(
+                                                            CupertinoIcons
+                                                                .trash,
+                                                            color: Colors.white,
+                                                            size: 20,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     );
                   },
                 ),

@@ -105,12 +105,7 @@ class _AddVideoModalState extends State<AddVideoModal> {
               children: [
                 Container(
                   margin: EdgeInsets.only(right: 15),
-                  padding: EdgeInsets.symmetric(horizontal: 25, vertical: 25),
-                  decoration: BoxDecoration(
-                    color: Color(0xff272727),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(CupertinoIcons.cloud_download),
+                  child: Icon(CupertinoIcons.globe, size: 70),
                 ),
                 Expanded(
                   child: Column(
@@ -119,7 +114,7 @@ class _AddVideoModalState extends State<AddVideoModal> {
                       Text(
                         'Download Video',
                         style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w400,
+                          fontWeight: FontWeight.w300,
                           fontSize: 25,
                         ),
                       ),
@@ -152,23 +147,22 @@ class _AddVideoModalState extends State<AddVideoModal> {
               ),
               child: Stack(
                 children: [
-                  Expanded(
-                    child: TextField(
-                      minLines: 3,
-                      maxLines: 3,
-                      controller: _urlController,
-                      enabled: !_isLoading,
-                      decoration: const InputDecoration(
-                        hintText:
-                            'For Example: https://youtube.com/watch?v=OpQFFLBMEPI',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
+                  TextField(
+                    minLines: 3,
+                    maxLines: 3,
+                    controller: _urlController,
+                    enabled: !_isLoading,
+                    decoration: const InputDecoration(
+                      hintText:
+                          'For Example: https://youtube.com/watch?v=OpQFFLBMEPI',
+                      hintStyle: TextStyle(fontWeight: FontWeight.w300),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
                       ),
-                      onSubmitted: (_) => _processUrl(),
                     ),
+                    onSubmitted: (_) => _processUrl(),
                   ),
                   Positioned(
                     bottom: 0,
@@ -245,7 +239,7 @@ class _AddVideoModalState extends State<AddVideoModal> {
                         'Fetch Video Info',
                         style: TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
               ),

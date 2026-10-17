@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:offlinetube/core/theme/app_theme.dart';
 import 'package:offlinetube/data/models/video_model.dart';
@@ -40,7 +41,7 @@ class VideoInfoSheet extends StatelessWidget {
           Text(
             video.title,
             style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w400,
               fontSize: 18,
             ),
           ),
@@ -71,7 +72,7 @@ class VideoInfoSheet extends StatelessWidget {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                  icon: const Icon(CupertinoIcons.trash, size: 20),
                   label: const Text('Delete'),
                 ),
               ),
@@ -102,7 +103,12 @@ class VideoInfoSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(String label, String value, ThemeData theme, {bool isMonospace = false}) {
+  Widget _buildInfoRow(
+    String label,
+    String value,
+    ThemeData theme, {
+    bool isMonospace = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -115,6 +121,7 @@ class VideoInfoSheet extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 color: theme.textTheme.bodySmall?.color,
+                fontWeight: FontWeight.w300,
               ),
             ),
           ),
@@ -123,7 +130,7 @@ class VideoInfoSheet extends StatelessWidget {
               value,
               style: TextStyle(
                 fontSize: 13,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w300,
                 fontFamily: isMonospace ? 'monospace' : null,
               ),
             ),
