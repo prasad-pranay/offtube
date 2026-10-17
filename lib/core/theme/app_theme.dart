@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class AppTheme {
   // Brand colors
   static const Color accentColor = Color(
-    0xFFFF2B55,
+    0xFFF61C0D,
   ); // Crimson / Vivid Red-Coral
   static const Color accentGradientStart = Color(0xFFFF3366);
   static const Color accentGradientEnd = Color(0xFFFF6584);

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme/app_theme.dart';
@@ -7,10 +8,7 @@ import 'widgets/quality_selection_sheet.dart';
 class AddVideoModal extends StatefulWidget {
   final String? initialUrl;
 
-  const AddVideoModal({
-    super.key,
-    this.initialUrl,
-  });
+  const AddVideoModal({super.key, this.initialUrl});
 
   @override
   State<AddVideoModal> createState() => _AddVideoModalState();
@@ -103,23 +101,42 @@ class _AddVideoModalState extends State<AddVideoModal> {
               ),
             ),
             const SizedBox(height: 20),
-            Text(
-              'Download Video',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                fontSize: 20,
-                letterSpacing: -0.4,
-              ),
+            Row(
+              children: [
+                Container(
+                  margin: EdgeInsets.only(right: 15),
+                  padding: EdgeInsets.symmetric(horizontal: 25, vertical: 25),
+                  decoration: BoxDecoration(
+                    color: Color(0xff272727),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(CupertinoIcons.cloud_download),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Download Video',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w400,
+                          fontSize: 25,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Paste a video link from YouTube video or a playlist and download for offline playback.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: theme.textTheme.bodySmall?.color,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 6),
-            Text(
-              'Paste a video link from YouTube or any supported site to extract and download for offline playback.',
-              style: TextStyle(
-                fontSize: 13,
-                color: theme.textTheme.bodySmall?.color,
-                height: 1.4,
-              ),
-            ),
+
             const SizedBox(height: 20),
             // Text field with Paste button
             Container(
@@ -133,29 +150,38 @@ class _AddVideoModalState extends State<AddVideoModal> {
                   width: 1,
                 ),
               ),
-              child: Row(
+              child: Stack(
                 children: [
                   Expanded(
                     child: TextField(
+                      minLines: 3,
+                      maxLines: 3,
                       controller: _urlController,
                       enabled: !_isLoading,
                       decoration: const InputDecoration(
-                        hintText: 'https://youtube.com/watch?v=...',
+                        hintText:
+                            'For Example: https://youtube.com/watch?v=OpQFFLBMEPI',
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                       ),
                       onSubmitted: (_) => _processUrl(),
                     ),
                   ),
-                  TextButton.icon(
-                    onPressed: _isLoading ? null : _pasteFromClipboard,
-                    icon: const Icon(Icons.content_paste_rounded, size: 16),
-                    label: const Text('Paste'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppTheme.accentColor,
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: TextButton.icon(
+                      onPressed: _isLoading ? null : _pasteFromClipboard,
+                      icon: const Icon(Icons.content_paste_rounded, size: 16),
+                      label: const Text('Paste'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.accentColor,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 8),
                 ],
               ),
             ),
@@ -164,12 +190,19 @@ class _AddVideoModalState extends State<AddVideoModal> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 16),
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    color: Colors.redAccent,
+                    size: 16,
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       _errorMessage!,
-                      style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                      style: const TextStyle(
+                        color: Colors.redAccent,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ],
@@ -199,7 +232,9 @@ class _AddVideoModalState extends State<AddVideoModal> {
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2.5,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           ),
                           SizedBox(width: 12),
@@ -208,7 +243,10 @@ class _AddVideoModalState extends State<AddVideoModal> {
                       )
                     : const Text(
                         'Fetch Video Info',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
               ),
             ),

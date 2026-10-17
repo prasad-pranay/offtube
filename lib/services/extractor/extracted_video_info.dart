@@ -46,6 +46,11 @@ class ExtractedVideoInfo {
   final String? thumbnailUrl;
   final int durationSeconds;
   final List<ExtractedFormat> formats;
+  final String? channelId;
+  final String? uploadDate;
+  final int? viewCount;
+  final bool? isLive;
+  final String? type;
 
   const ExtractedVideoInfo({
     required this.id,
@@ -54,19 +59,50 @@ class ExtractedVideoInfo {
     this.description,
     this.author,
     this.thumbnailUrl,
+    this.channelId,
+    this.uploadDate,
+    this.viewCount,
+    this.isLive,
+    this.type,
     required this.durationSeconds,
     required this.formats,
   });
+}
 
-  String get formattedDuration {
-    final duration = Duration(seconds: durationSeconds);
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes.remainder(60);
-    final seconds = duration.inSeconds.remainder(60);
+class ExtractedChannelInfo {
+  final String id;
+  final String url;
+  final String description;
+  final String author;
+  final int videoCount;
+  final String thumbnailUrl;
+  final String type;
 
-    if (hours > 0) {
-      return '$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-    }
-    return '$minutes:${seconds.toString().padLeft(2, '0')}';
-  }
+  const ExtractedChannelInfo({
+    required this.id,
+    required this.url,
+    required this.description,
+    required this.author,
+    required this.videoCount,
+    required this.thumbnailUrl,
+    required this.type,
+  });
+}
+
+class ExtractedPlaylistInfo {
+  final String id;
+  final String url;
+  final String title;
+  final int videoCount;
+  final List thumbnailUrl;
+  final String type;
+
+  const ExtractedPlaylistInfo({
+    required this.type,
+    required this.id,
+    required this.url,
+    required this.title,
+    required this.videoCount,
+    required this.thumbnailUrl,
+  });
 }

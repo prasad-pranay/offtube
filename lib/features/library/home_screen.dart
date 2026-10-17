@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../core/theme/app_theme.dart';
 import '../../data/models/video_model.dart';
 import '../../services/database/database_service.dart';
 import '../../services/playback/playback_coordinator.dart';
@@ -11,9 +10,13 @@ import 'widgets/library_empty_state.dart';
 import 'widgets/video_info_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
-  final VoidCallback onOpenAddVideo;
-
-  const HomeScreen({super.key, required this.onOpenAddVideo});
+  final TextEditingController searchController;
+  final VoidCallback callSearch;
+  const HomeScreen({
+    super.key,
+    required this.searchController,
+    required this.callSearch,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -22,7 +25,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   bool _isGridView = false;
   String _searchQuery = '';
-  final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
 
   @override
@@ -36,7 +38,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    _searchController.dispose();
     super.dispose();
   }
 
@@ -104,6 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         toolbarHeight: 65,
         backgroundColor: theme.scaffoldBackgroundColor,
+        automaticallyImplyLeading: false,
         leading: _isSearching
             ? IconButton(
                 onPressed: () => setState(() {
@@ -114,7 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
             : null,
         title: _isSearching
             ? TextField(
-                controller: _searchController,
+                controller: widget.searchController,
                 autofocus: true,
                 style: TextStyle(fontSize: 16),
                 decoration: InputDecoration(
@@ -149,41 +151,15 @@ class _HomeScreenState extends State<HomeScreen> {
               )
             : Row(
                 children: [
-                  Image.asset("appicon.png", width: 40, height: 40),
-                  // Container(
-                  //   padding: const EdgeInsets.all(6),
-                  //   decoration: BoxDecoration(
-                  //     gradient: const LinearGradient(
-                  //       colors: [AppTheme.accentColor, AppTheme.accentGradientEnd],
-                  //     ),
-                  //     borderRadius: BorderRadius.circular(10),
-                  //   ),
-                  //   child: const Icon(
-                  //     Icons.play_arrow_rounded,
-                  //     color: Colors.white,
-                  //     size: 20,
-                  //   ),
-                  // ),
+                  Image.asset("appicon.png", width: 40),
                   const SizedBox(width: 10),
                   const Text(
                     'Youtube',
-                    style: TextStyle(fontStyle: FontStyle.italic),
+                    style: TextStyle(fontWeight: FontWeight.w400),
                   ),
                 ],
               ),
         actions: [
-          if (!_isSearching)
-            IconButton(
-              onPressed: () {
-                PlaybackCoordinator.instance.loadPlaylist(
-                  DatabaseService.instance.getAllVideos(),
-                );
-                if (!PlaybackCoordinator.instance.isShuffle) {
-                  PlaybackCoordinator.instance.toggleShuffle();
-                }
-              },
-              icon: const Icon(CupertinoIcons.shuffle, size: 18),
-            ),
           if (!_isSearching)
             IconButton(
               icon: Icon(CupertinoIcons.search),
@@ -192,22 +168,62 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (_isSearching) {
                     _isSearching = false;
                     _searchQuery = '';
-                    _searchController.clear();
+                    widget.searchController.clear();
                   } else {
                     _isSearching = true;
                   }
                 });
               },
             ),
-          IconButton(
-            icon: Icon(
-              _isGridView
-                  ? Icons.view_list_rounded
-                  : CupertinoIcons.square_grid_2x2_fill,
+          if (!_isSearching)
+            PopupMenuButton<String>(
+              icon: const Icon(CupertinoIcons.ellipsis_vertical, size: 20),
+              tooltip: 'More options',
+              onSelected: (value) {
+                switch (value) {
+                  case 'shuffle':
+                    PlaybackCoordinator.instance.loadPlaylist(
+                      DatabaseService.instance.getAllVideos(),
+                    );
+
+                    if (!PlaybackCoordinator.instance.isShuffle) {
+                      PlaybackCoordinator.instance.toggleShuffle();
+                    }
+                    break;
+
+                  case 'view':
+                    _toggleView();
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'shuffle',
+                  child: Row(
+                    children: [
+                      const Icon(CupertinoIcons.shuffle, size: 18),
+                      const SizedBox(width: 12),
+                      const Text('Shuffle all'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'view',
+                  child: Row(
+                    children: [
+                      Icon(
+                        _isGridView
+                            ? Icons.view_list_rounded
+                            : CupertinoIcons.square_grid_2x2_fill,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(_isGridView ? 'Switch to List' : 'Switch to Grid'),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            tooltip: _isGridView ? 'Switch to List' : 'Switch to Grid',
-            onPressed: _toggleView,
-          ),
           const SizedBox(width: 4),
         ],
       ),
@@ -228,7 +244,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 }).toList();
 
           if (allVideos.isEmpty) {
-            return LibraryEmptyState(onAddVideo: widget.onOpenAddVideo);
+            return LibraryEmptyState(
+              searchController: widget.searchController,
+              callSearch: widget.callSearch,
+            );
           }
 
           if (filteredVideos.isEmpty && _searchQuery.isNotEmpty) {
@@ -257,48 +276,6 @@ class _HomeScreenState extends State<HomeScreen> {
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              // Header Section
-              // SliverToBoxAdapter(
-              //   child: Padding(
-              //     padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              //     child: Row(
-              //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              //       crossAxisAlignment: CrossAxisAlignment.center,
-              //       children: [
-              //         Text(
-              //           '${filteredVideos.length} ${filteredVideos.length == 1 ? 'video' : 'videos'} offline',
-              //           style: TextStyle(
-              //             fontSize: 13,
-              //             color: theme.textTheme.bodySmall?.color,
-              //           ),
-              //         ),
-
-              //         // Shuffle All Button
-              //         if (filteredVideos.isNotEmpty)
-              //           TextButton.icon(
-              //             onPressed: () {
-              //               PlaybackCoordinator.instance.loadPlaylist(
-              //                 filteredVideos,
-              //               );
-              //               if (!PlaybackCoordinator.instance.isShuffle) {
-              //                 PlaybackCoordinator.instance.toggleShuffle();
-              //               }
-              //             },
-              //             icon: const Icon(Icons.shuffle_rounded, size: 18),
-              //             label: const Text('Shuffle Play'),
-              //             style: TextButton.styleFrom(
-              //               foregroundColor: AppTheme.accentColor,
-              //               padding: const EdgeInsets.symmetric(
-              //                 horizontal: 12,
-              //                 vertical: 6,
-              //               ),
-              //             ),
-              //           ),
-              //       ],
-              //     ),
-              //   ),
-              // ),
-
               // Videos List / Grid
               if (_isGridView)
                 SliverPadding(

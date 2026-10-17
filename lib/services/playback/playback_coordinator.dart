@@ -387,7 +387,6 @@ class PlaybackCoordinator extends ChangeNotifier with WidgetsBindingObserver {
 
       try {
         debugPrint('Trying video quality: ${videoFormat.qualityLabel}');
-
         candidateController = VideoPlayerController.networkUrl(
           Uri.parse(videoFormat.videoUrl!),
           videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
@@ -519,7 +518,7 @@ class PlaybackCoordinator extends ChangeNotifier with WidgetsBindingObserver {
       rethrow;
     }
 
-    // loadRecommendations(info);
+    loadRecommendations(info);
   }
 
   // ---------------------------------------------------------------------------

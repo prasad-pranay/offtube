@@ -4,12 +4,7 @@ import '../../services/database/database_service.dart';
 import '../../services/storage/storage_service.dart';
 
 class SettingsScreen extends StatefulWidget {
-  final VoidCallback onThemeChanged;
-
-  const SettingsScreen({
-    super.key,
-    required this.onThemeChanged,
-  });
+  const SettingsScreen({super.key});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -83,7 +78,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 );
               }
             },
-            child: const Text('Clear All', style: TextStyle(color: Colors.redAccent)),
+            child: const Text(
+              'Clear All',
+              style: TextStyle(color: Colors.redAccent),
+            ),
           ),
         ],
       ),
@@ -95,9 +93,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
+      // bottomNavigationBar: BottomNavigation(currentIndex: 3),
+      appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         children: [
@@ -115,11 +112,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Used Storage', style: TextStyle(fontWeight: FontWeight.w600)),
+                          const Text(
+                            'Used Storage',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
                           const SizedBox(height: 2),
                           Text(
                             '$_videoCount offline videos',
-                            style: TextStyle(fontSize: 12, color: theme.textTheme.bodySmall?.color),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.textTheme.bodySmall?.color,
+                            ),
                           ),
                         ],
                       ),
@@ -140,8 +143,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onPressed: _confirmClearStorage,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.redAccent,
-                        side: const BorderSide(color: Colors.redAccent, width: 0.8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        side: const BorderSide(
+                          color: Colors.redAccent,
+                          width: 0.8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       icon: const Icon(Icons.delete_sweep_rounded, size: 18),
                       label: const Text('Clear All Downloads'),
@@ -160,7 +168,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 SwitchListTile(
                   title: const Text('Autoplay Next Video'),
-                  subtitle: const Text('Automatically play subsequent videos in library'),
+                  subtitle: const Text(
+                    'Automatically play subsequent videos in library',
+                  ),
                   activeThumbColor: AppTheme.accentColor,
                   value: _autoplayNext,
                   onChanged: (val) {
@@ -171,12 +181,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const Divider(height: 1),
                 SwitchListTile(
                   title: const Text('Remember Playback Position'),
-                  subtitle: const Text('Resume watched videos from where you left off'),
+                  subtitle: const Text(
+                    'Resume watched videos from where you left off',
+                  ),
                   activeThumbColor: AppTheme.accentColor,
                   value: _rememberPosition,
                   onChanged: (val) {
                     setState(() => _rememberPosition = val);
-                    DatabaseService.instance.setSetting('remember_position', val);
+                    DatabaseService.instance.setSetting(
+                      'remember_position',
+                      val,
+                    );
                   },
                 ),
               ],
@@ -202,17 +217,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           children: [
                             const Padding(
                               padding: EdgeInsets.all(16),
-                              child: Text('Default Quality', style: TextStyle(fontWeight: FontWeight.w700)),
+                              child: Text(
+                                'Default Quality',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
                             ),
-                            ...['Best Available', '1080p', '720p', '480p', 'Audio Only'].map((q) {
+                            ...[
+                              'Best Available',
+                              '1080p',
+                              '720p',
+                              '480p',
+                              'Audio Only',
+                            ].map((q) {
                               return ListTile(
                                 title: Text(q),
                                 trailing: _defaultQuality == q
-                                    ? const Icon(Icons.check_rounded, color: AppTheme.accentColor)
+                                    ? const Icon(
+                                        Icons.check_rounded,
+                                        color: AppTheme.accentColor,
+                                      )
                                     : null,
                                 onTap: () {
                                   setState(() => _defaultQuality = q);
-                                  DatabaseService.instance.setSetting('default_quality', q);
+                                  DatabaseService.instance.setSetting(
+                                    'default_quality',
+                                    q,
+                                  );
                                   Navigator.pop(ctx);
                                 },
                               );
@@ -226,7 +256,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const Divider(height: 1),
                 SwitchListTile(
                   title: const Text('Wi-Fi Only Downloads'),
-                  subtitle: const Text('Avoid downloading videos over cellular mobile data'),
+                  subtitle: const Text(
+                    'Avoid downloading videos over cellular mobile data',
+                  ),
                   activeThumbColor: AppTheme.accentColor,
                   value: _wifiOnly,
                   onChanged: (val) {
@@ -255,18 +287,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         const Padding(
                           padding: EdgeInsets.all(16),
-                          child: Text('Theme Mode', style: TextStyle(fontWeight: FontWeight.w700)),
+                          child: Text(
+                            'Theme Mode',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                         ),
                         ...['dark', 'light', 'system'].map((m) {
                           return ListTile(
                             title: Text(m.toUpperCase()),
                             trailing: _themeMode == m
-                                ? const Icon(Icons.check_rounded, color: AppTheme.accentColor)
+                                ? const Icon(
+                                    Icons.check_rounded,
+                                    color: AppTheme.accentColor,
+                                  )
                                 : null,
                             onTap: () {
                               setState(() => _themeMode = m);
-                              DatabaseService.instance.setSetting('theme_mode', m);
-                              widget.onThemeChanged();
+                              DatabaseService.instance.setSetting(
+                                'theme_mode',
+                                m,
+                              );
+                              // widget.onThemeChanged();
                               Navigator.pop(ctx);
                             },
                           );
@@ -287,8 +328,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 const ListTile(
                   title: Text('OfflineTube'),
-                  subtitle: Text('Version 1.0.0 • Pure offline playback & downloader'),
-                  leading: Icon(Icons.offline_bolt_rounded, color: AppTheme.accentColor),
+                  subtitle: Text(
+                    'Version 1.0.0 • Pure offline playback & downloader',
+                  ),
+                  leading: Icon(
+                    Icons.offline_bolt_rounded,
+                    color: AppTheme.accentColor,
+                  ),
                 ),
                 const Divider(height: 1),
                 ListTile(

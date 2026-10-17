@@ -1,9 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:offlinetube/features/library/channel_screen.dart';
 import 'package:offlinetube/features/library/search_overlay.dart';
 import 'package:offlinetube/features/library/search_screen.dart';
 import 'package:offlinetube/features/library/stream_page.dart';
 import 'package:offlinetube/features/player/mini_player.dart';
+import 'package:offlinetube/services/extractor/extracted_video_info.dart';
 import 'package:offlinetube/services/extractor/video_extractor_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../services/share/share_intent_service.dart';
@@ -28,16 +30,95 @@ class MainNavigationShell extends StatefulWidget {
 
 class _MainNavigationShellState extends State<MainNavigationShell> {
   int _currentIndex = 0;
+  ExtractedVideoInfo? _activeStream;
+  final TextEditingController searchController = TextEditingController();
+  String? _channelId;
+  final GlobalKey<StreamVideoPageState> _streamPageKey =
+      GlobalKey<StreamVideoPageState>();
+  final GlobalKey<SearchScreenState> _searchPageKey =
+      GlobalKey<SearchScreenState>();
 
   final AppLinks _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
   bool _handlingIncomingLink = false;
 
+  late final List<Widget> _screens;
+  final FocusNode _searchFocusNode = FocusNode();
+  bool _isVideoFullscreen = false;
   @override
   void initState() {
     super.initState();
     _listenToShareIntents();
     _initDeepLinks();
+    _screens = [
+      HomeScreen(
+        searchController: searchController,
+        callSearch: () {
+          setState(() {
+            _currentIndex = 3;
+            _searchPageKey.currentState?.parentSearchCalled(
+              searchController.text,
+            );
+            searchController.text = "";
+          });
+        },
+      ),
+      DownloadsScreen(),
+      SettingsScreen(),
+      SearchScreen(
+        searchFocusNode: _searchFocusNode,
+        key: _searchPageKey,
+        openStreamPage: (ExtractedVideoInfo? info) {
+          if (!mounted) return;
+          setState(() {
+            _activeStream = info;
+          });
+        },
+        openChannelPage: (String? info) {
+          if (!mounted) return;
+          setState(() {
+            _channelId = info;
+          });
+        },
+      ),
+    ];
+  }
+
+  String normalizeYouTubeUrl(String input) {
+    final uri = Uri.tryParse(input.trim());
+
+    if (uri == null) {
+      throw ArgumentError('Invalid YouTube URL');
+    }
+
+    final host = uri.host.toLowerCase();
+    final isYouTube =
+        host == 'youtube.com' ||
+        host.endsWith('.youtube.com') ||
+        host == 'youtu.be' ||
+        host.endsWith('.youtu.be');
+
+    if (!isYouTube) {
+      throw ArgumentError('Not a YouTube URL');
+    }
+
+    String? id;
+
+    if (host == 'youtu.be' || host.endsWith('.youtu.be')) {
+      id = uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
+    } else if (uri.path == '/watch') {
+      id = uri.queryParameters['v'];
+    } else if (uri.pathSegments.isNotEmpty &&
+        ['shorts', 'embed', 'live', 'video'].contains(uri.pathSegments.first) &&
+        uri.pathSegments.length > 1) {
+      id = uri.pathSegments[1];
+    }
+
+    if (id == null || !RegExp(r'^[\w-]{11}$').hasMatch(id)) {
+      throw ArgumentError('Invalid YouTube video ID');
+    }
+
+    return 'https://www.youtube.com/watch?v=$id';
   }
 
   Future<void> _initDeepLinks() async {
@@ -92,7 +173,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
 
     try {
       final info = await VideoExtractorService.instance.extractInfo(
-        uri.toString(),
+        normalizeYouTubeUrl(uri.toString()),
       );
 
       if (!mounted) {
@@ -102,9 +183,9 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
 
       removeOverlay();
 
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => StreamVideoPage(info: info)),
-      );
+      setState(() {
+        _activeStream = info;
+      });
     } catch (error) {
       debugPrint('Failed to open YouTube link: $error');
     } finally {
@@ -122,6 +203,14 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         ShareIntentService.instance.clearSharedUrl();
       }
     });
+  }
+
+  void _openAddVideoModalBasic({String? initialUrl}) async {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => AddVideoModal(initialUrl: initialUrl),
+    );
   }
 
   void _openAddVideoModal({String? initialUrl}) async {
@@ -151,19 +240,9 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
       }
 
       removeOverlay();
-      await Navigator.push(
-        context,
-        PageRouteBuilder(
-          opaque: false,
-          barrierColor: Colors.transparent,
-          transitionDuration: Duration.zero,
-          maintainState: true,
-          pageBuilder: (context, animation, secondaryAnimation) {
-            return StreamVideoPage(info: info);
-          },
-          reverseTransitionDuration: const Duration(milliseconds: 180),
-        ),
-      );
+      setState(() {
+        _activeStream = info;
+      });
     } catch (e, stackTrace) {
       removeOverlay();
       debugPrint('Failed to open stream page 1: $e');
@@ -175,11 +254,6 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         const SnackBar(content: Text('Could not load this video')),
       );
     }
-    // showModalBottomSheet(
-    //   context: context,
-    //   isScrollControlled: true,
-    //   builder: (ctx) => AddVideoModal(initialUrl: initialUrl),
-    // );
   }
 
   void _openFullscreenPlayer() {
@@ -199,8 +273,6 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
       ),
     );
   }
-
-  final FocusNode _searchFocusNode = FocusNode();
 
   @override
   void dispose() {
@@ -223,6 +295,14 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
 
       return GestureDetector(
         onTap: () {
+          if (_activeStream != null) {
+            _streamPageKey.currentState?.enterMiniModeFromParent();
+          }
+          if (_channelId != null) {
+            setState(() {
+              _channelId = null;
+            });
+          }
           setState(() {
             _currentIndex = index;
             if (_currentIndex == 3) {
@@ -299,19 +379,6 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
       );
     }
 
-    final screens = [
-      HomeScreen(onOpenAddVideo: () => _openAddVideoModal()),
-      DownloadsScreen(onAddVideo: () => _openAddVideoModal()),
-      SettingsScreen(onThemeChanged: widget.onThemeChanged),
-      SearchScreen(
-        onOpenAddVideo: () => _openAddVideoModal(),
-        focusNode: _searchFocusNode,
-        goHome: () => setState(() {
-          _currentIndex = 0;
-        }),
-      ),
-    ];
-
     return PopScope(
       canPop: _currentIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
@@ -328,6 +395,15 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         }
 
         // If not on Home, go Home
+        if (_channelId != null) {
+          setState(() {
+            _channelId = null;
+          });
+          return;
+        }
+        if (_activeStream != null) {
+          return;
+        }
         if (_currentIndex != 0) {
           setState(() {
             _currentIndex = 0;
@@ -338,7 +414,23 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         body: Stack(
           children: [
             // Current Selected Page
-            IndexedStack(index: _currentIndex, children: screens),
+            IndexedStack(index: _currentIndex, children: _screens),
+            if (_channelId != null) ChannelPage(channelId: _channelId!),
+            if (_activeStream != null)
+              StreamVideoPage(
+                key: _streamPageKey,
+                info: _activeStream!,
+                onFullscreenChanged: (fullscreen) {
+                  setState(() {
+                    _isVideoFullscreen = fullscreen;
+                  });
+                },
+                openStreamPage: (ExtractedVideoInfo? info) {
+                  setState(() {
+                    _activeStream = info;
+                  });
+                },
+              ),
 
             // Persistent Mini Player above Bottom Navigation
             Positioned(
@@ -348,101 +440,109 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
               child: MiniPlayerWidget(onExpand: _openFullscreenPlayer),
             ),
 
-            MiniPlayer(),
+            if (_activeStream == null)
+              MiniPlayer(
+                openStreamPage: (ExtractedVideoInfo? info) {
+                  setState(() {
+                    _activeStream = info;
+                  });
+                },
+              ),
           ],
         ),
 
-        bottomNavigationBar: BottomAppBar(
-          color: theme.bottomSheetTheme.backgroundColor,
-          elevation: 0,
-          notchMargin: 0,
-          height: 60,
-          padding: EdgeInsets.zero,
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: Color(0xFF2B2B2D))),
-            ),
-            child: Row(
-              children: [
-                // HOME
-                Expanded(
-                  child: _buildNavItem(
-                    icon: CupertinoIcons.house,
-                    selectedIcon: CupertinoIcons.house_fill,
-                    label: 'Home',
-                    index: 0,
+        bottomNavigationBar: _isVideoFullscreen
+            ? null
+            : BottomAppBar(
+                color:
+                    theme.bottomSheetTheme.backgroundColor ??
+                    theme.colorScheme.surface,
+                elevation: 0,
+                notchMargin: 0,
+                height: 60,
+                padding: EdgeInsets.zero,
+                child: Container(
+                  decoration: BoxDecoration(
+                    // border: Border(top: BorderSide(color: Color(0xFF2B2B2D))),
                   ),
-                ),
-                Expanded(
-                  child: _buildNavItem(
-                    icon: CupertinoIcons.search,
-                    selectedIcon: CupertinoIcons.search,
-                    label: 'Search',
-                    index: 3,
-                  ),
-                ),
+                  child: Row(
+                    children: [
+                      // HOME
+                      Expanded(
+                        child: _buildNavItem(
+                          icon: CupertinoIcons.house,
+                          selectedIcon: CupertinoIcons.house_fill,
+                          label: 'Home',
+                          index: 0,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildNavItem(
+                          icon: CupertinoIcons.search,
+                          selectedIcon: CupertinoIcons.search,
+                          label: 'Search',
+                          index: 3,
+                        ),
+                      ),
 
-                // CENTER SPACE FOR FAB
-                // const SizedBox(width: 72),
-                GestureDetector(
-                  onTap: () => _openAddVideoModal(),
-                  child: Container(
-                    margin: EdgeInsets.only(bottom: 10),
-                    decoration: BoxDecoration(
-                      color: Color(0xFF262626),
-                      // color: theme.colorScheme.tertiary,
-                      borderRadius: BorderRadius.circular(50),
-                    ),
-                    padding: EdgeInsets.all(7),
-                    child: Icon(CupertinoIcons.add, size: 28),
+                      // CENTER SPACE FOR FAB
+                      // const SizedBox(width: 72),
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.center,
+                          widthFactor: 1,
+                          child: GestureDetector(
+                            onTap: () => _openAddVideoModalBasic(),
+                            child: Container(
+                              margin: EdgeInsets.only(bottom: 10),
+                              decoration: BoxDecoration(
+                                color: Color(0xFFffffff),
+                                // color: theme.colorScheme.tertiary,
+                                borderRadius: BorderRadius.circular(50),
+                              ),
+                              padding: EdgeInsets.all(7),
+                              child: Icon(
+                                CupertinoIcons.add,
+                                size: 28,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // DOWNLOADS
+                      Expanded(
+                        child: ListenableBuilder(
+                          listenable: DownloadManager.instance,
+                          builder: (context, _) {
+                            final count =
+                                DownloadManager.instance.activeDownloadsCount;
+
+                            return _buildNavItem(
+                              icon: CupertinoIcons.cloud_download,
+                              selectedIcon: CupertinoIcons.cloud_download_fill,
+                              label: 'Download',
+                              index: 1,
+                              badgeCount: count,
+                            );
+                          },
+                        ),
+                      ),
+
+                      // SETTINGS
+                      Expanded(
+                        child: _buildNavItem(
+                          icon: CupertinoIcons.settings_solid,
+                          selectedIcon: CupertinoIcons.settings,
+                          label: 'Settings',
+                          index: 2,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-
-                // DOWNLOADS
-                Expanded(
-                  child: ListenableBuilder(
-                    listenable: DownloadManager.instance,
-                    builder: (context, _) {
-                      final count =
-                          DownloadManager.instance.activeDownloadsCount;
-
-                      return _buildNavItem(
-                        icon: CupertinoIcons.cloud_download,
-                        selectedIcon: CupertinoIcons.cloud_download_fill,
-                        label: 'Download',
-                        index: 1,
-                        badgeCount: count,
-                      );
-                    },
-                  ),
-                ),
-
-                // SETTINGS
-                Expanded(
-                  child: _buildNavItem(
-                    icon: CupertinoIcons.settings_solid,
-                    selectedIcon: CupertinoIcons.settings,
-                    label: 'Settings',
-                    index: 2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        // floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-        // floatingActionButton: SizedBox(
-        //   width: 67,
-        //   height: 67,
-        //   child: FloatingActionButton(
-        //     onPressed: () => _openAddVideoModal(),
-        //     backgroundColor: AppTheme.accentColor,
-        //     foregroundColor: Colors.white,
-        //     shape: const CircleBorder(),
-        //     elevation: 4,
-        //     child: const Icon(Icons.add_rounded, size: 32),
-        //   ),
-        // ),
+              ),
       ),
     );
   }

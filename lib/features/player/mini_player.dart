@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:offlinetube/services/extractor/extracted_video_info.dart';
 import 'package:video_player/video_player.dart';
 
 import 'package:offlinetube/services/playback/playback_coordinator.dart';
-import '../library/stream_page.dart';
+// import '../library/stream_page.dart';
 
 class MiniPlayer extends StatefulWidget {
-  const MiniPlayer({super.key});
+  final void Function(ExtractedVideoInfo info) openStreamPage;
+  const MiniPlayer({super.key, required this.openStreamPage});
 
   @override
   State<MiniPlayer> createState() => _MiniPlayerState();
@@ -30,11 +32,13 @@ class _MiniPlayerState extends State<MiniPlayer> {
   double _deltaX = 0;
   double _deltaY = 0;
 
-  static const double _width = 210;
+  // static const double _width = 210;
   static const double _normalHeight = 120;
   static const double _expandedHeight = 150;
   static const double _sideGap = 12;
   static const double _verticalGap = 100;
+
+  double get _width => firstTouch ? 250 : 210;
 
   double get _height => firstTouch ? _expandedHeight : _normalHeight;
 
@@ -66,27 +70,28 @@ class _MiniPlayerState extends State<MiniPlayer> {
     _coordinator.restoreMiniPlayer();
 
     try {
-      await Navigator.of(context).push(
-        PageRouteBuilder(
-          opaque: false,
-          barrierColor: Colors.transparent,
-          maintainState: true,
-          transitionDuration: const Duration(milliseconds: 280),
-          reverseTransitionDuration: const Duration(milliseconds: 220),
-          pageBuilder: (context, animation, secondaryAnimation) {
-            return StreamVideoPage(info: info);
-          },
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final curved = CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
-              reverseCurve: Curves.easeInCubic,
-            );
+      widget.openStreamPage(info);
+      // await Navigator.of(context).push(
+      //   PageRouteBuilder(
+      //     opaque: false,
+      //     barrierColor: Colors.transparent,
+      //     maintainState: true,
+      //     transitionDuration: const Duration(milliseconds: 280),
+      //     reverseTransitionDuration: const Duration(milliseconds: 220),
+      //     pageBuilder: (context, animation, secondaryAnimation) {
+      //       return StreamVideoPage(info: info);
+      //     },
+      //     transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      //       final curved = CurvedAnimation(
+      //         parent: animation,
+      //         curve: Curves.easeOutCubic,
+      //         reverseCurve: Curves.easeInCubic,
+      //       );
 
-            return FadeTransition(opacity: curved, child: child);
-          },
-        ),
-      );
+      //       return FadeTransition(opacity: curved, child: child);
+      //     },
+      //   ),
+      // );
     } finally {
       if (mounted) {
         setState(() => _isOpening = false);
@@ -170,6 +175,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
         verticalMoved || velocity.dy.abs() > velocityThreshold;
 
     setState(() {
+      firstTouch = false;
       // Only change an axis when that swipe actually affects it.
       // This preserves the other axis when moving between edges.
       if (horizontalIntent) {
@@ -179,6 +185,12 @@ class _MiniPlayerState extends State<MiniPlayer> {
       if (verticalIntent) {
         _topSide = verticalDirection < 0;
       }
+      // print(
+      //   "yes: $_leftSide old:$_left | new:${_leftSide ? _sideGap : _rightPosition(size.width)}",
+      // );
+      // if (_top != null && _top! > 400 && !_topSide) {
+      //   _closeMiniPlayer();
+      // }
 
       _left = _leftSide ? _sideGap : _rightPosition(size.width);
       _top = _topSide ? _verticalGap : _bottomPosition(size.height);
@@ -309,14 +321,20 @@ class _MiniPlayerState extends State<MiniPlayer> {
 
                       Positioned(
                         right: 2,
-                        top: 22,
-                        child: IconButton(
-                          tooltip: 'Close mini-player',
-                          onPressed: _closeMiniPlayer,
-                          icon: const Icon(
-                            Icons.close_rounded,
-                            color: Colors.white,
-                            size: 20,
+                        top: 2,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black45,
+                            borderRadius: BorderRadius.circular(50),
+                          ),
+                          child: IconButton(
+                            tooltip: 'Close mini-player',
+                            onPressed: _closeMiniPlayer,
+                            icon: const Icon(
+                              Icons.close_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                           ),
                         ),
                       ),

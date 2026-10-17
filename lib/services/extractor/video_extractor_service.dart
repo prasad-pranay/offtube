@@ -1,7 +1,13 @@
+// import 'dart:ffi';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart' as yt;
 import 'package:ytdlp_flutter/ytdlp_flutter.dart' as ytdlp;
 import 'extracted_video_info.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class VideoExtractorService {
   static VideoExtractorService? _instance;
@@ -23,17 +29,173 @@ class VideoExtractorService {
     }
   }
 
+  int stringToDuration(String str) {
+    if (!str.contains(':')) {
+      return int.tryParse(str) ?? 0;
+    }
+
+    final value = str.split(':');
+
+    if (value.length == 2) {
+      return (int.tryParse(value[0]) ?? 0) * 60 + (int.tryParse(value[1]) ?? 0);
+    }
+
+    if (value.length == 3) {
+      return (int.tryParse(value[0]) ?? 0) * 3600 +
+          (int.tryParse(value[1]) ?? 0) * 60 +
+          (int.tryParse(value[2]) ?? 0);
+    }
+
+    return 0;
+  }
+
+  Future<List> searchQuery(String query, {int limit = 10}) async {
+    try {
+      final videos = [];
+
+      // filter: yt.TypeFilters.video,
+      final results = await _ytExplode.search.searchContent(query);
+      for (final video in results) {
+        if (video is yt.SearchVideo) {
+          videos.add(
+            ExtractedVideoInfo(
+              type: "video",
+              channelId: video.channelId,
+              uploadDate: video.uploadDate,
+              viewCount: video.viewCount,
+              isLive: video.isLive,
+              id: video.id.value,
+              url: 'https://www.youtube.com/watch?v=${video.id.value}',
+              title: video.title,
+              description: video.description,
+              author: video.author,
+              thumbnailUrl: video.thumbnails.last.url.toString(),
+              durationSeconds: stringToDuration(video.duration),
+              formats: const [],
+            ),
+          );
+        } else if (video is yt.SearchChannel) {
+          videos.add(
+            ExtractedChannelInfo(
+              type: "channel",
+              id: video.id.value,
+              url: 'https://www.youtube.com/channel/${video.id.value}',
+              description: video.description,
+              author: video.name,
+              videoCount: video.videoCount,
+              thumbnailUrl: video.thumbnails.last.url.toString(),
+            ),
+          );
+        } else if (video is yt.SearchPlaylist) {
+          videos.add(
+            ExtractedPlaylistInfo(
+              type: "playlist",
+              id: video.id.value,
+              url: 'https://www.youtube.com/playlist?list=${video.id.value}',
+              title: video.title,
+              videoCount: video.videoCount,
+              thumbnailUrl: video.thumbnails,
+            ),
+          );
+        } else {
+          print('else data');
+        }
+      }
+
+      if (videos.isEmpty) {
+        final results = await _ytExplode.search.search(query);
+        for (final video in results) {
+          videos.add(
+            ExtractedVideoInfo(
+              type: "video",
+              channelId: video.channelId.value,
+              uploadDate: video.uploadDateRaw,
+              viewCount: 10,
+              isLive: video.isLive,
+              id: video.id.value,
+              url: 'https://www.youtube.com/watch?v=${video.id.value}',
+              title: video.title,
+              description: video.description,
+              author: video.author,
+              thumbnailUrl: video.thumbnails.highResUrl,
+              durationSeconds: video.duration!.inSeconds,
+              formats: const [],
+            ),
+          );
+        }
+        print("second wala ${videos.length}");
+        return videos;
+      } else {
+        return videos;
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Video search failed: $e');
+      debugPrintStack(stackTrace: stackTrace);
+      try {
+        const apiKey = 'AIzaSyCU-DpbLdYo1mgs9Jg7BBbFdk0AE_0q0dI';
+
+        final uri = Uri.https('www.googleapis.com', '/youtube/v3/search', {
+          'part': 'snippet',
+          'q': query,
+          'type': 'video',
+          'maxResults': '10',
+          'regionCode': 'IN',
+          'relevanceLanguage': 'en',
+          'key': apiKey,
+        });
+
+        final response = await http.get(uri);
+
+        if (response.statusCode != 200) {
+          throw Exception('YouTube API error: ${response.statusCode}');
+        }
+
+        final data = jsonDecode(response.body);
+        print("dynamic data ${data}");
+        // for (final i in data) {
+        //   print('${i}');
+        // }
+        return [];
+      } catch (error) {
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   const SnackBar(
+        //     content: Row(
+        //       children: [
+        //         Icon(CupertinoIcons.globe),
+        //         SizedBox(width: 10),
+        //         Text('Internet not available'),
+        //       ],
+        //     ),
+        //   ),
+        // );
+        return [];
+      }
+    }
+  }
+
   Future<List<ExtractedVideoInfo>> searchVideos(
     String query, {
     int limit = 10,
   }) async {
     try {
+      final videos = <ExtractedVideoInfo>[];
+
       final results = await _ytExplode.search.search(
         query,
         filter: yt.TypeFilters.video,
       );
 
-      final videos = <ExtractedVideoInfo>[];
+      // for (final item in results) {
+      //   if (item is yt.SearchVideo) {
+      //     print('Videohai video: ${item.title}');
+      //   } else if (item is yt.SearchChannel) {
+      //     print('Videohai Channel: ${item.name}');
+      //   } else if (item is yt.SearchPlaylist) {
+      //     print('Videohai Playlist: ${item.title}');
+      //   } else {
+      //     print('Videohai pata nahi ${item.thumbnails}');
+      //   }
+      // }
 
       for (final video in results) {
         // Don't include duplicates.
@@ -41,12 +203,25 @@ class VideoExtractorService {
           continue;
         }
 
+        // type: "video",
+        //               channelId: video.channelId.value,
+        //               viewCount: 10,
+        //               isLive: video.isLive,
+        //               id: video.id.value,
+        //               url: 'https://www.youtube.com/watch?v=${video.id.value}',
+        //               title: video.title,
+        //               description: video.description,
+        //               author: video.author,
+        //               thumbnailUrl: video.thumbnails.highResUrl,
+        //               durationSeconds: video.duration!.inSeconds,
+        //               formats: const [],
         videos.add(
           ExtractedVideoInfo(
             id: video.id.value,
             url: 'https://www.youtube.com/watch?v=${video.id.value}',
             title: video.title,
-            description: null,
+            description: video.description,
+            uploadDate: video.uploadDateRaw,
             author: video.author,
             thumbnailUrl: video.thumbnails.highResUrl.isNotEmpty
                 ? video.thumbnails.highResUrl
@@ -65,6 +240,19 @@ class VideoExtractorService {
       debugPrintStack(stackTrace: stackTrace);
       return [];
     }
+  }
+
+  Future<yt.Channel> getChannel(channelId) async {
+    final yt.Channel result = await _ytExplode.channels.get(channelId);
+    return result;
+  }
+
+  Future getChannelInfo(channelId, _activeTab) async {
+    final result = await _ytExplode.channels.getUploadsFromPage(
+      channelId,
+      videoType: _activeTab == 1 ? yt.VideoType.shorts : yt.VideoType.normal,
+    );
+    return result;
   }
 
   /// Validate if URL is a valid web media URL
@@ -91,11 +279,6 @@ class VideoExtractorService {
 
     // Try YouTubeExplode first (lightning fast Dart client-side extraction)
     try {
-      // final videoId = yt.VideoId(url);
-      // final video = await _ytExplode.videos.get(videoId);
-      // final manifest = await _ytExplode.videos.streamsClient.getManifest(
-      //   videoId,
-      // );
       final videoId = yt.VideoId(url);
       final results = await Future.wait([
         _ytExplode.videos.get(videoId),
@@ -126,16 +309,6 @@ class VideoExtractorService {
 
       // Audio only streams
       final bestAudio = manifest.audioOnly.withHighestBitrate();
-
-      // final Map<int, dynamic> smallest = {};
-
-      // for (final s in manifest.videoOnly) {
-      //   final h = s.videoResolution.height;
-      //   if (!smallest.containsKey(h) ||
-      //       s.size.totalBytes < smallest[h]!.size.totalBytes) {
-      //     smallest[h] = s;
-      //   }
-      // }
 
       formats.add(
         ExtractedFormat(
@@ -169,7 +342,7 @@ class VideoExtractorService {
         thumbnailUrl: video.thumbnails.highResUrl.isNotEmpty
             ? video.thumbnails.highResUrl
             : video.thumbnails.standardResUrl,
-        durationSeconds: video.duration?.inSeconds ?? 0,
+        durationSeconds: video.duration!.inMinutes,
         formats: formats,
       );
     } catch (ytError) {
@@ -226,13 +399,13 @@ class VideoExtractorService {
           description: raw?['description']?.toString(),
           author: info.uploader,
           thumbnailUrl: info.thumbnailUrl,
-          durationSeconds: info.durationSeconds?.toInt() ?? 0,
+          durationSeconds: info.durationSeconds!.toInt(),
           formats: formats,
         );
       } catch (ytdlpErr) {
         debugPrint('ytdlp_flutter exception: $ytdlpErr');
       }
-
+      print("recieved file link : ${rawUrl} ${url}");
       throw Exception(
         'Could not extract media info. Please verify the link is valid and public.',
       );

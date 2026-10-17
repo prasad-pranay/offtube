@@ -3,14 +3,10 @@ import '../../core/theme/app_theme.dart';
 import '../../services/download/download_manager.dart';
 import '../../services/download/download_task_item.dart';
 import 'widgets/download_task_card.dart';
+import 'package:offlinetube/features/navigation/helper.dart';
 
 class DownloadsScreen extends StatelessWidget {
-  final VoidCallback onAddVideo;
-
-  const DownloadsScreen({
-    super.key,
-    required this.onAddVideo,
-  });
+  const DownloadsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -18,6 +14,8 @@ class DownloadsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: null,
         title: const Text('Downloads'),
         actions: [
           IconButton(
@@ -29,6 +27,7 @@ class DownloadsScreen extends StatelessWidget {
           ),
         ],
       ),
+      // bottomNavigationBar: BottomNavigation(currentIndex: 2),
       body: ListenableBuilder(
         listenable: DownloadManager.instance,
         builder: (context, _) {
@@ -76,11 +75,14 @@ class DownloadsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton.icon(
-                      onPressed: onAddVideo,
+                      onPressed: () => openAddVideoModalBasic(context),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.accentColor,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -96,14 +98,18 @@ class DownloadsScreen extends StatelessWidget {
           }
 
           final activeTasks = tasks
-              .where((t) =>
-                  t.status == DownloadStatus.downloading ||
-                  t.status == DownloadStatus.pending)
+              .where(
+                (t) =>
+                    t.status == DownloadStatus.downloading ||
+                    t.status == DownloadStatus.pending,
+              )
               .toList();
           final historyTasks = tasks
-              .where((t) =>
-                  t.status != DownloadStatus.downloading &&
-                  t.status != DownloadStatus.pending)
+              .where(
+                (t) =>
+                    t.status != DownloadStatus.downloading &&
+                    t.status != DownloadStatus.pending,
+              )
               .toList();
 
           return ListView(
@@ -120,12 +126,15 @@ class DownloadsScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                ...activeTasks.map((t) => DownloadTaskCard(
-                      task: t,
-                      onCancel: () => DownloadManager.instance.cancelDownload(t.id),
-                      onRetry: () => DownloadManager.instance.retryDownload(t.id),
-                      onRemove: () => DownloadManager.instance.removeTask(t.id),
-                    )),
+                ...activeTasks.map(
+                  (t) => DownloadTaskCard(
+                    task: t,
+                    onCancel: () =>
+                        DownloadManager.instance.cancelDownload(t.id),
+                    onRetry: () => DownloadManager.instance.retryDownload(t.id),
+                    onRemove: () => DownloadManager.instance.removeTask(t.id),
+                  ),
+                ),
                 const SizedBox(height: 16),
               ],
               if (historyTasks.isNotEmpty) ...[
@@ -139,12 +148,15 @@ class DownloadsScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                ...historyTasks.map((t) => DownloadTaskCard(
-                      task: t,
-                      onCancel: () => DownloadManager.instance.cancelDownload(t.id),
-                      onRetry: () => DownloadManager.instance.retryDownload(t.id),
-                      onRemove: () => DownloadManager.instance.removeTask(t.id),
-                    )),
+                ...historyTasks.map(
+                  (t) => DownloadTaskCard(
+                    task: t,
+                    onCancel: () =>
+                        DownloadManager.instance.cancelDownload(t.id),
+                    onRetry: () => DownloadManager.instance.retryDownload(t.id),
+                    onRemove: () => DownloadManager.instance.removeTask(t.id),
+                  ),
+                ),
               ],
             ],
           );

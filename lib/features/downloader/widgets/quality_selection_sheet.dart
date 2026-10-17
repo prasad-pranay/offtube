@@ -6,10 +6,7 @@ import 'package:offlinetube/services/download/download_manager.dart';
 class QualitySelectionSheet extends StatefulWidget {
   final ExtractedVideoInfo info;
 
-  const QualitySelectionSheet({
-    super.key,
-    required this.info,
-  });
+  const QualitySelectionSheet({super.key, required this.info});
 
   @override
   State<QualitySelectionSheet> createState() => _QualitySelectionSheetState();
@@ -93,7 +90,10 @@ class _QualitySelectionSheetState extends State<QualitySelectionSheet> {
                       width: 100,
                       height: 64,
                       color: theme.colorScheme.surface,
-                      child: const Icon(Icons.video_library_rounded, color: AppTheme.accentColor),
+                      child: const Icon(
+                        Icons.video_library_rounded,
+                        color: AppTheme.accentColor,
+                      ),
                     ),
                   ),
                 ),
@@ -106,11 +106,14 @@ class _QualitySelectionSheetState extends State<QualitySelectionSheet> {
                       widget.info.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${widget.info.author ?? 'Unknown author'} • ${widget.info.formattedDuration}',
+                      '${widget.info.author ?? 'Unknown author'} • ${widget.info.durationSeconds}',
                       style: TextStyle(
                         fontSize: 12,
                         color: theme.textTheme.bodySmall?.color,
@@ -148,7 +151,10 @@ class _QualitySelectionSheetState extends State<QualitySelectionSheet> {
                   },
                   borderRadius: BorderRadius.circular(14),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: isSelected
                           ? AppTheme.accentColor.withAlpha(25)
@@ -167,7 +173,9 @@ class _QualitySelectionSheetState extends State<QualitySelectionSheet> {
                           format.hasVideo
                               ? Icons.hd_outlined
                               : Icons.audiotrack_rounded,
-                          color: isSelected ? AppTheme.accentColor : theme.textTheme.bodySmall?.color,
+                          color: isSelected
+                              ? AppTheme.accentColor
+                              : theme.textTheme.bodySmall?.color,
                           size: 22,
                         ),
                         const SizedBox(width: 14),
@@ -178,7 +186,9 @@ class _QualitySelectionSheetState extends State<QualitySelectionSheet> {
                               Text(
                                 format.qualityLabel,
                                 style: TextStyle(
-                                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
                                   fontSize: 14,
                                 ),
                               ),
@@ -198,13 +208,19 @@ class _QualitySelectionSheetState extends State<QualitySelectionSheet> {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: isSelected ? AppTheme.accentColor : theme.textTheme.bodySmall?.color,
+                              color: isSelected
+                                  ? AppTheme.accentColor
+                                  : theme.textTheme.bodySmall?.color,
                             ),
                           ),
                         const SizedBox(width: 8),
                         Icon(
-                          isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_unchecked_rounded,
-                          color: isSelected ? AppTheme.accentColor : theme.textTheme.bodySmall?.color,
+                          isSelected
+                              ? Icons.radio_button_checked_rounded
+                              : Icons.radio_button_unchecked_rounded,
+                          color: isSelected
+                              ? AppTheme.accentColor
+                              : theme.textTheme.bodySmall?.color,
                           size: 22,
                         ),
                       ],
